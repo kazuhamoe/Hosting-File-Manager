@@ -1,0 +1,33 @@
+# ====================================================================
+# Hosting File Manager — Git Ignore Configuration
+# ====================================================================
+
+# Sensitive user credentials and runtime states
+storage/credentials.json
+storage/login_attempts.json
+storage/logs/*.log
+!storage/logs/.gitkeep
+storage/temp/*
+!storage/temp/.gitkeep
+
+# Session & temporary test artifacts
+cookies.txt
+sandbox/
+test_*/
+
+# Distribution packages (release archives belong in GitHub Releases)
+*.zip
+*.tar.gz
+*.rar
+
+# Operating System & IDE caches
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*~
+*.bak
