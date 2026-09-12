@@ -14,16 +14,20 @@ Dilengkapi dengan antarmuka modern layaknya cPanel File Manager / Desktop Explor
 ## ✨ Fitur Utama (Key Features)
 
 - **🖥️ Tampilan cPanel-like Modern:** Desain padat, intuitif, cepat, responsif, dengan ikon SVG bersih untuk semua jenis berkas.
+- **🌓 Mode Gelap / Terang (Dark / Light Theme Toggle):** Beralih tema secara mulus hanya dengan 1-klik, tersimpan di `localStorage` dan mendeteksi preferensi sistem.
+- **📊 Disk Usage / Quota Meter Widget:** Indikator visual real-time kapasitas disk server bergaya cPanel dengan kode warna dinamis (Hijau, Oranye, Merah) dan fallback aman.
 - **⚡ Zero Dependencies:** 100% PHP Native murni, tidak butuh Composer, Node.js, atau database. Tinggal upload langsung jalan.
 - **📦 ZIP Extractor & Compressor Tangguh:**
   - Ekstrak berkas arsip `.zip` dengan opsi penanganan konflik (*Overwrite*, *Skip*, *Rename*).
   - Proteksi **Anti-Zip Slip** ketat tanpa memblokir berkas website sah (`index.php`, `.htaccess`, `config.php`, `app/`, dsb.).
   - Kompres multi-berkas atau folder langsung menjadi file `.zip`.
+- **📑 1-Click Duplicate / Backup File:** Gandakan berkas atau folder secara instan di direktori yang sama (`_copy`, `_copy2`, dst.) dari toolbar atau klik kanan.
 - **🚀 Upload Berkas Besar (> 100 MB):** Dukungan upload banyak file sekaligus (*multiple files*) dilengkapi real-time progress bar dan penanganan payload besar yang andal.
-- **📝 In-Browser Code Editor:**
-  - Modal editor kode dengan nomor baris otomatis.
-  - Fitur **Layar Penuh (Fullscreen)** dan **Toggle Word Wrap**.
-  - Shortcut keyboard (`Ctrl+S` untuk simpan, `Esc` untuk keluar).
+- **🌈 In-Browser Code Editor & Syntax Highlighting:**
+  - Micro Syntax Highlighter bawaan (tanpa CDN/eksternal library) untuk PHP, JavaScript/JSON, HTML, CSS, SQL, dan Shell/Bash.
+  - Pemilihan bahasa otomatis (*Auto-Detection*) dan selector manual.
+  - Modal editor kode dengan nomor baris otomatis, **Layar Penuh (Fullscreen)**, dan **Toggle Word Wrap**.
+  - Shortcut keyboard (`Ctrl+S` untuk simpan, `Tab` untuk indentasi 4 spasi, `Esc` untuk keluar).
 - **🔒 Keamanan Kelas Hosting:**
   - Perlindungan terhadap Path Traversal (`../`, null bytes, Windows reserved devices).
   - Pembatasan filesystem kanonikal berbasis `ALLOWED_ROOT`.

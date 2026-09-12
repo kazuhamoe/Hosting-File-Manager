@@ -657,17 +657,119 @@ Aktivitas yang dicatat: `LOGIN`, `UPLOAD`, `EXTRACT`, `DELETE`, `MOVE`, `COPY`, 
 
 ---
 
-## 43. Fitur Tambahan Setelah MVP
+## 43. Status Implementasi Fitur Tambahan
 
-*(Direncanakan untuk rilis berikutnya setelah MVP stabil)*
-- Edit text file & CHMOD / Permission editor
-- Change owner/group
-- Upload via URL / Remote download
-- Buat file ZIP baru di server
-- Ekstraksi TAR / GZIP
-- Duplicate file
-- Bulk operations (Select all, Bulk delete, Bulk move, Bulk download)
-- Storage usage widget & Recent files / Favorites
-- Dark mode & Keyboard shortcuts
-- File comparison
-- Image / Video / Audio preview
+Semua fitur berikut telah berhasil diimplementasikan, diuji, dan tersedia di versi produksi:
+- [x] Edit text file & CHMOD / Permission editor (Oktal & Matrix)
+- [x] Buat file ZIP baru di server (Compress Archive)
+- [x] Sesi Login 30 Hari & Pengaturan Kredensial Akun (Admin Settings UI)
+- [x] 1-Click Duplicate / Backup Item
+- [x] Bulk operations (Select all, Bulk delete, Bulk copy, Bulk move, Bulk download)
+- [x] Storage / Disk usage meter widget (cPanel style)
+- [x] Syntax Highlighting di Code Editor (Micro Tokenizer Engine)
+- [x] Dark Mode / Light Mode Theme Toggle
+- [x] Keyboard shortcuts (`Ctrl+S`, `Tab`, `Esc`)
+
+---
+
+## 44. Spesifikasi: Sesi Login 30 Hari & Pengaturan Akun Admin
+
+1. **Sesi Persisten 30 Hari:**
+   - Menggunakan `SESSION_TIMEOUT = 2592000` (30 hari) pada `config.php`.
+   - Konfigurasi `session.gc_maxlifetime`, cookie params `lifetime`, `httponly`, dan `samesite: Lax`.
+   - Mengatasi permasalahan session logout dini pada lingkungan shared hosting.
+
+2. **Pengaturan Akun Admin (Admin Settings Modal):**
+   - Modal UI dapat diakses melalui tombol **⚙️ Pengaturan** di pojok kanan atas.
+   - Mengizinkan admin mengubah username login dan password baru.
+   - Wajib memverifikasi password saat ini (*current password*) sebelum perubahan diterapkan.
+   - Kredensial yang diperbarui disimpan secara aman di `storage/credentials.json` (terproteksi dari akses web langsung).
+
+---
+
+## 45. Spesifikasi: Disk Usage / Quota Meter Widget (cPanel Style)
+
+1. **Tujuan:**
+   - Menampilkan indikator visual kapasitas disk server secara langsung di top navbar layaknya widget cPanel / Web Hosting.
+
+2. **Logika Backend (`FileManager::getDiskUsage`):**
+   - Mengambil total kapasitas dan sisa ruang bebas melalui `disk_total_space(ALLOWED_ROOT)` dan `disk_free_space(ALLOWED_ROOT)`.
+   - Menghitung persentase pemakaian (`percentage = (used / total) * 100`).
+   - Format ukuran bytes manusiawi (`B`, `KB`, `MB`, `GB`, `TB`).
+   - Fallback toleran jika fungsi disk dinonaktifkan di `php.ini` (`disable_functions`), mengembalikan `available: false` tanpa merusak antarmuka.
+
+3. **Tampilan Frontend:**
+   - Widget compact di sebelah badge username.
+   - Progress bar dinamis dengan 3 tingkat warna status:
+     - **Hijau (< 70%):** Kapasitas aman.
+     - **Kuning / Oranye (70% - 90%):** Kapasitas mulai penuh (peringatan).
+     - **Merah (> 90%):** Kapasitas kritis (segera bersihkan file).
+   - Tooltip hover informatif menampilkan detail angka: Terpakai, Kapasitas Total, dan Ruang Bebas.
+
+---
+
+## 46. Spesifikasi: 1-Click Duplicate / Backup Berkas
+
+1. **Tujuan:**
+   - Memberikan cara termudah bagi developer / sysadmin untuk membuat salinan instan berkas atau direktori di folder yang sama sebelum melakukan modifikasi (contoh: `index_copy.php` atau `wp-config_copy.php`).
+
+2. **Aturan Penamaan Duplikasi:**
+   - Menggunakan format `[nama_asli]_copy.[ekstensi]`.
+   - Jika sudah ada file `_copy`, sistem secara otomatis menggunakan suffix bertingkat: `[nama_asli]_copy2.[ekstensi]`, `_copy3`, dst.
+   - Untuk folder: `[nama_folder]_copy/`, `_copy2/`, dst. secara rekursif menyalin seluruh isi folder.
+
+3. **Integrasi Antarmuka:**
+   - Tombol **Duplicate** di Action Toolbar (aktif otomatis saat item dipilih).
+   - Menu klik kanan (Desktop Context Menu) **Duplikat (Duplicate)**.
+   - Menu aksi dropdown per baris tabel.
+   - Mendukung duplikasi banyak file sekaligus (*bulk duplication*).
+
+4. **Keamanan:**
+   - Melarang duplikasi berkas terproteksi sistem (`config.php`, `credentials.json`, audit log).
+   - Melarang duplikasi direktori root.
+   - Setiap aksi duplikasi dicatat ke log audit (`DUPLICATE`).
+
+---
+
+## 47. Spesifikasi: Syntax Highlighting di In-Browser Code Editor
+
+1. **Tujuan:**
+   - Mempermudah pengeditan script PHP, HTML, CSS, JavaScript, JSON, SQL, dan Shell script langsung dari browser tanpa silau atau bingung membaca kode panjang.
+
+2. **Arsitektur Tanpa Dependensi (Zero Dependency Micro Highlighter):**
+   - Menggunakan teknik overlay berkinerja tinggi: `<pre class="code-editor-pre"><code id="editorCode">` diposisikan di bawah `<textarea class="code-editor-textarea">`.
+   - Textarea transparan dengan kursor caret putih menyala, sementara elemen `pre/code` merender token warna-warni secara real-time.
+   - Sinkronisasi scroll horizontal dan vertikal 100% presisi (`scrollTop` & `scrollLeft`).
+   - Tipografi terkalibrasi identik: font monospace (`Consolas, Monaco, "Courier New"`), line-height `1.5`, tab size `4`.
+
+3. **Dukungan Bahasa Pemrograman:**
+   - **PHP:** Tag pembuka/penutup, variabel `$` warna biru muda, keywords warna biru, string warna oranye bata, komentar warna hijau italic, function calls warna kuning muda.
+   - **JavaScript / JSON:** Keywords, strings, numbers, comments, booleans, async/await.
+   - **HTML / XML:** Tag elements, attribute names, attribute values, HTML comments.
+   - **CSS:** Selectors, properties, hex colors, numeric units, media queries.
+   - **SQL:** SQL reserved keywords (SELECT, INSERT, UPDATE, JOIN, dsb.), strings, numbers, comments.
+   - **Shell / Bash:** Commands, variables, comments, arguments.
+
+4. **Fitur Tambahan Editor:**
+   - **Auto-Detection:** Mendeteksi bahasa pemrograman secara otomatis dari ekstensi file yang dibuka.
+   - **Language Selector Dropdown:** Admin dapat mengubah manual bahasa highlight jika diinginkan.
+   - **Toggle Highlight Button:** Tombol on/off untuk mematikan highlighting (misal untuk file data yang sangat besar).
+   - **Safe Limiter:** Untuk berkas di atas 250 KB, highlighting beralih ke mode plain text untuk menjaga ketanggapan browser.
+
+---
+
+## 48. Spesifikasi: Dark Mode / Light Mode Theme System
+
+1. **Tujuan:**
+   - Menyediakan kenyamanan visual optimal bagi developer yang bekerja di lingkungan temaram (malam hari) maupun terang.
+
+2. **Desain Sistem Tema:**
+   - Mode Terang (Light Mode): Tampilan khas cPanel dengan background bersih `#f8fafc` dan tabel putih bergaris halus.
+   - Mode Gelap (Dark Mode): Palet gelap modern terinspirasi oleh tema dark GitHub / VS Code (`#0b0f19` body, `#151d2f` cards/tables/modals, `#e2e8f0` typography, `#38bdf8` link accents).
+
+3. **Interaksi & Persistensi:**
+   - Tombol toggle tema di header navbar dengan animasi ikon Matahari / Bulan.
+   - Pengaturan disimpan di `localStorage` peramban (`hfm_theme`) sehingga preferensi pengguna tetap terjaga saat me-refresh halaman atau membuka sesi berikutnya.
+   - Deteksi otomatis preferensi sistem operasi pengguna (`prefers-color-scheme: dark`) saat pertama kali dibuka.
+   - Transisi warna yang halus tanpa flicker (flash of unstyled content).
+

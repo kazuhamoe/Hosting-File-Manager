@@ -699,6 +699,118 @@ class FileManager
     }
 
     /**
+     * Menduplikat berkas atau folder secara instan di direktori yang sama (1-Click Duplicate / Backup).
+     *
+     * @param string $relativePath Virtual relative path ke berkas/folder sumber
+     * @return array [ 'success' => bool, 'message' => string, 'name' => string, 'copy_name' => string, 'virtual_path' => string ]
+     */
+    public static function duplicateItem(string $relativePath): array
+    {
+        if (Security::isProtected($relativePath)) {
+            return ['success' => false, 'message' => 'Item ini dilindungi dan tidak dapat diduplikasi.'];
+        }
+
+        $sourceReal = Security::resolvePath($relativePath, true);
+        if ($sourceReal === null || !file_exists($sourceReal)) {
+            return ['success' => false, 'message' => 'Berkas atau folder sumber tidak ditemukan atau akses ditolak.'];
+        }
+
+        // Cegah menduplikasi root
+        if (strcasecmp($sourceReal, Security::getRoot()) === 0) {
+            return ['success' => false, 'message' => 'Tidak dapat menduplikasi root directory.'];
+        }
+
+        $parentDir = dirname($sourceReal);
+        $basename = basename($sourceReal);
+
+        // Cari nama duplikasi yang belum ada
+        if (is_dir($sourceReal)) {
+            $baseNameOnly = $basename;
+            $counter = 1;
+            do {
+                $newName = $baseNameOnly . '_copy' . ($counter > 1 ? $counter : '');
+                $targetReal = $parentDir . DIRECTORY_SEPARATOR . $newName;
+                $counter++;
+            } while (file_exists($targetReal));
+
+            if (!self::copyDirectoryRecursive($sourceReal, $targetReal)) {
+                Logger::log('DUPLICATE', Security::toVirtualPath($sourceReal), 'FAILED', 'Gagal menyalin direktori');
+                return ['success' => false, 'message' => "Gagal menduplikasi folder '$basename'."];
+            }
+        } else {
+            $ext = pathinfo($sourceReal, PATHINFO_EXTENSION);
+            $filename = pathinfo($sourceReal, PATHINFO_FILENAME);
+            $extSuffix = ($ext !== '') ? '.' . $ext : '';
+
+            $counter = 1;
+            do {
+                $newName = $filename . '_copy' . ($counter > 1 ? $counter : '') . $extSuffix;
+                $targetReal = $parentDir . DIRECTORY_SEPARATOR . $newName;
+                $counter++;
+            } while (file_exists($targetReal));
+
+            if (!@copy($sourceReal, $targetReal)) {
+                Logger::log('DUPLICATE', Security::toVirtualPath($sourceReal), 'FAILED', 'Permission error saat copy berkas');
+                return ['success' => false, 'message' => "Gagal menduplikasi berkas '$basename'. Periksa izin tulis direktori."];
+            }
+        }
+
+        $newVirtualPath = Security::toVirtualPath($targetReal);
+        Logger::log('DUPLICATE', Security::toVirtualPath($sourceReal) . " -> " . $newVirtualPath, 'SUCCESS');
+
+        return [
+            'success'      => true,
+            'message'      => "Berhasil menduplikasi '$basename' menjadi '$newName'.",
+            'name'         => $newName,
+            'copy_name'    => $newName,
+            'virtual_path' => $newVirtualPath
+        ];
+    }
+
+    /**
+     * Mengambil data kapasitas penyimpanan disk (Disk Usage / Quota).
+     */
+    public static function getDiskUsage(): array
+    {
+        $root = Security::getRoot();
+        $total = @disk_total_space($root);
+        $free = @disk_free_space($root);
+
+        if ($total === false || $total <= 0) {
+            return [
+                'available'       => false,
+                'message'         => 'Informasi kapasitas disk tidak tersedia pada lingkungan server ini.'
+            ];
+        }
+
+        $freeBytes = ($free !== false && $free >= 0) ? (float)$free : 0.0;
+        $usedBytes = max(0.0, (float)$total - $freeBytes);
+        $percent = round(($usedBytes / (float)$total) * 100, 1);
+
+        $totalFormatted = Security::formatBytes((float)$total);
+        $usedFormatted = Security::formatBytes((float)$usedBytes);
+        $freeFormatted = Security::formatBytes((float)$freeBytes);
+
+        return [
+            'available'       => true,
+            'total'           => (float)$total,
+            'total_bytes'     => (float)$total,
+            'total_formatted' => $totalFormatted,
+            'total_human'     => $totalFormatted,
+            'used'            => (float)$usedBytes,
+            'used_bytes'      => (float)$usedBytes,
+            'used_formatted'  => $usedFormatted,
+            'used_human'      => $usedFormatted,
+            'free'            => (float)$freeBytes,
+            'free_bytes'      => (float)$freeBytes,
+            'free_formatted'  => $freeFormatted,
+            'free_human'      => $freeFormatted,
+            'percent'         => $percent,
+            'percentage'      => $percent
+        ];
+    }
+
+    /**
      * Menghasilkan struktur tree folder dalam ALLOWED_ROOT untuk modal destination selector.
      */
     public static function getFolderTree(): array

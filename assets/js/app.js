@@ -23,7 +23,10 @@
         contextTarget: null, // item object or null (blank area)
         editorDirty: false,
         editorOriginalContent: '',
-        compressItems: []
+        compressItems: [],
+        theme: 'light',
+        editorHighlight: localStorage.getItem('hfm_editor_highlight') !== '0',
+        editorLang: 'auto'
     };
 
     // DOM Elements Cache
@@ -42,12 +45,20 @@
         btnDownloadSelected: document.getElementById('btnDownloadSelected'),
         btnCompressSelected: document.getElementById('btnCompressSelected'),
         btnExtractSelected: document.getElementById('btnExtractSelected'),
+        btnDuplicateSelected: document.getElementById('btnDuplicateSelected'),
         btnCopySelected: document.getElementById('btnCopySelected'),
         btnMoveSelected: document.getElementById('btnMoveSelected'),
         btnEditSelected: document.getElementById('btnEditSelected'),
         btnRenameSelected: document.getElementById('btnRenameSelected'),
         btnChmodSelected: document.getElementById('btnChmodSelected'),
         btnDeleteSelected: document.getElementById('btnDeleteSelected'),
+        // Header Widgets & Buttons
+        btnThemeToggle: document.getElementById('btnThemeToggle'),
+        iconThemeMoon: document.getElementById('iconThemeMoon'),
+        iconThemeSun: document.getElementById('iconThemeSun'),
+        diskMeter: document.getElementById('diskMeter'),
+        diskMeterText: document.getElementById('diskMeterText'),
+        diskMeterBar: document.getElementById('diskMeterBar'),
         // Status bar elements
         statusTotalItems: document.getElementById('statusTotalItems'),
         statusSelectedItems: document.getElementById('statusSelectedItems'),
@@ -72,6 +83,9 @@
         headerUserBadge: document.getElementById('headerUserBadge'),
         contextMenu: document.getElementById('contextMenu'),
         // Code Editor Elements
+        editorContainer: document.getElementById('editorContainer'),
+        editorPre: document.getElementById('editorPre'),
+        editorCode: document.getElementById('editorCode'),
         editorContent: document.getElementById('editorContent'),
         editorFilePath: document.getElementById('editorFilePath'),
         editorFilePathDisplay: document.getElementById('editorFilePathDisplay'),
@@ -81,6 +95,8 @@
         editorStatChars: document.getElementById('editorStatChars'),
         editorSaveStatus: document.getElementById('editorSaveStatus'),
         editorWarningBox: document.getElementById('editorWarningBox'),
+        editorLangSelect: document.getElementById('editorLangSelect'),
+        btnEditorHighlight: document.getElementById('btnEditorHighlight'),
         btnSaveEditor: document.getElementById('btnSaveEditor'),
         btnCancelEditor: document.getElementById('btnCancelEditor'),
         btnEditorClose: document.getElementById('btnEditorClose'),
@@ -110,6 +126,7 @@
             }
         }
 
+        initTheme();
         updateToggleHiddenButton();
         loadDirectory(initialPath, false);
         setupEventListeners();
@@ -140,6 +157,9 @@
         elements.btnBack?.addEventListener('click', navigateBack);
         elements.btnForward?.addEventListener('click', navigateForward);
 
+        // Header theme toggle button
+        elements.btnThemeToggle?.addEventListener('click', toggleTheme);
+
         // Toggle Hidden Files
         elements.btnToggleHidden?.addEventListener('click', () => {
             state.showHidden = !state.showHidden;
@@ -168,6 +188,7 @@
         elements.btnDownloadSelected?.addEventListener('click', handleDownloadSelected);
         elements.btnCompressSelected?.addEventListener('click', handleCompressSelected);
         elements.btnExtractSelected?.addEventListener('click', handleExtractSelected);
+        elements.btnDuplicateSelected?.addEventListener('click', handleDuplicateSelected);
         elements.btnCopySelected?.addEventListener('click', handleCopySelected);
         elements.btnMoveSelected?.addEventListener('click', handleMoveSelected);
         elements.btnEditSelected?.addEventListener('click', handleEditSelected);
@@ -330,6 +351,10 @@
         renderBreadcrumbs(data.breadcrumbs || []);
         renderTable(state.items);
         updateSelectionUI();
+
+        if (data.disk) {
+            updateDiskMeter(data.disk);
+        }
 
         if (elements.searchInput) {
             elements.searchInput.value = '';
@@ -612,6 +637,7 @@
 
         if (!item.is_protected) {
             menu += `<button class="dropdown-item" data-action="rename"><svg class="dropdown-item-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>Ganti Nama</span></button>`;
+            menu += `<button class="dropdown-item" data-action="duplicate"><svg class="dropdown-item-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><span>Duplikat (Duplicate)</span></button>`;
             menu += `<button class="dropdown-item" data-action="copy"><svg class="dropdown-item-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg><span>Salin ke (Copy)</span></button>`;
             menu += `<button class="dropdown-item" data-action="move"><svg class="dropdown-item-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg><span>Pindahkan ke (Move)</span></button>`;
             menu += `<button class="dropdown-item" data-action="chmod"><svg class="dropdown-item-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span>Hak Akses</span></button>`;
@@ -660,6 +686,9 @@
                 break;
             case 'rename':
                 openRenameModal(item);
+                break;
+            case 'duplicate':
+                duplicateSingleItem(item.virtual_path);
                 break;
             case 'delete':
                 openDeleteModal(item);
@@ -723,6 +752,7 @@
         // Toolbar Buttons State
         if (elements.btnDownloadSelected) elements.btnDownloadSelected.disabled = (count === 0);
         if (elements.btnCompressSelected) elements.btnCompressSelected.disabled = (count === 0);
+        if (elements.btnDuplicateSelected) elements.btnDuplicateSelected.disabled = (count === 0);
         if (elements.btnCopySelected) elements.btnCopySelected.disabled = (count === 0);
         if (elements.btnMoveSelected) elements.btnMoveSelected.disabled = (count === 0);
         if (elements.btnDeleteSelected) elements.btnDeleteSelected.disabled = (count === 0 || (singleItem && singleItem.is_protected));
@@ -909,13 +939,22 @@
         const textarea = elements.editorContent;
         if (!textarea) return;
 
-        // Dirty checking and stats updating
+        // Dirty checking, stats updating, and syntax highlight sync
         textarea.addEventListener('input', () => {
             updateEditorStats();
+            syncEditorHighlight();
             const isDirty = textarea.value !== state.editorOriginalContent;
             state.editorDirty = isDirty;
             if (elements.editorDirtyBadge) {
                 elements.editorDirtyBadge.style.display = isDirty ? 'inline-block' : 'none';
+            }
+        });
+
+        // Sync scroll between textarea and syntax highlight pre
+        textarea.addEventListener('scroll', () => {
+            if (elements.editorPre) {
+                elements.editorPre.scrollTop = textarea.scrollTop;
+                elements.editorPre.scrollLeft = textarea.scrollLeft;
             }
         });
 
@@ -940,8 +979,22 @@
         // Toggle Word Wrap
         elements.btnEditorWrap?.addEventListener('click', () => {
             const isWrapped = textarea.classList.toggle('is-wrapped');
+            elements.editorContainer?.classList.toggle('is-wrapped', isWrapped);
             elements.btnEditorWrap.classList.toggle('active', isWrapped);
             textarea.setAttribute('wrap', isWrapped ? 'soft' : 'off');
+            syncEditorHighlight();
+        });
+
+        // Toggle Syntax Highlighting ON / OFF
+        elements.btnEditorHighlight?.addEventListener('click', () => {
+            state.editorHighlight = !state.editorHighlight;
+            localStorage.setItem('hfm_editor_highlight', state.editorHighlight ? '1' : '0');
+            syncEditorHighlight();
+        });
+
+        // Change Language Selector
+        elements.editorLangSelect?.addEventListener('change', () => {
+            syncEditorHighlight();
         });
 
         // Toggle Fullscreen
@@ -951,6 +1004,7 @@
                 const isFs = modalBox.classList.toggle('is-fullscreen');
                 elements.btnEditorFullscreen.classList.toggle('active', isFs);
                 elements.btnEditorFullscreen.textContent = isFs ? 'Normal' : 'Layar Penuh';
+                syncEditorHighlight();
             }
         });
     }
@@ -970,9 +1024,11 @@
         if (elements.editorFilePathDisplay) elements.editorFilePathDisplay.textContent = virtualPath;
         if (elements.editorModalTitle) elements.editorModalTitle.textContent = `Editor: ${virtualPath.split('/').pop()}`;
         if (elements.editorContent) elements.editorContent.value = 'Memuat isi berkas...';
+        if (elements.editorCode) elements.editorCode.textContent = '';
         if (elements.editorSaveStatus) elements.editorSaveStatus.textContent = '';
         if (elements.editorWarningBox) elements.editorWarningBox.style.display = 'none';
         if (elements.editorDirtyBadge) elements.editorDirtyBadge.style.display = 'none';
+        if (elements.editorLangSelect) elements.editorLangSelect.value = 'auto';
 
         openModal(elements.modalEditor);
 
@@ -989,6 +1045,7 @@
             state.editorOriginalContent = data.content;
             state.editorDirty = false;
             updateEditorStats();
+            syncEditorHighlight();
             elements.editorContent.focus();
         }
 
@@ -1486,6 +1543,7 @@
         setDisp('ctxDiv1', isItem);
         setDisp('ctxCompress', isItem);
         setDisp('ctxCopy', isItem && !isProtected);
+        setDisp('ctxDuplicate', isItem && !isProtected);
         setDisp('ctxMove', isItem && !isProtected);
         setDisp('ctxRename', isItem && !isProtected);
         setDisp('ctxChmod', isItem && !isProtected);
@@ -2596,6 +2654,351 @@
             return await res.json();
         } catch (err) {
             return { success: false, message: 'Terjadi kesalahan koneksi server.' };
+        }
+    }
+
+    // --------------------------------------------------------------------------
+    // Theme Management (Dark / Light Mode)
+    // --------------------------------------------------------------------------
+    function initTheme() {
+        const savedTheme = localStorage.getItem('hfm_theme');
+        let theme = savedTheme;
+        if (!theme) {
+            theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        }
+        applyTheme(theme);
+
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                if (!localStorage.getItem('hfm_theme')) {
+                    applyTheme(e.matches ? 'dark' : 'light');
+                }
+            });
+        }
+    }
+
+    function applyTheme(theme) {
+        state.theme = theme;
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            if (elements.iconThemeMoon) elements.iconThemeMoon.style.display = 'none';
+            if (elements.iconThemeSun) elements.iconThemeSun.style.display = 'inline-block';
+            if (elements.btnThemeToggle) elements.btnThemeToggle.title = 'Beralih ke Mode Terang (Light Mode)';
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+            if (elements.iconThemeMoon) elements.iconThemeMoon.style.display = 'inline-block';
+            if (elements.iconThemeSun) elements.iconThemeSun.style.display = 'none';
+            if (elements.btnThemeToggle) elements.btnThemeToggle.title = 'Beralih ke Mode Gelap (Dark Mode)';
+        }
+    }
+
+    function toggleTheme() {
+        const newTheme = state.theme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('hfm_theme', newTheme);
+        applyTheme(newTheme);
+    }
+
+    // --------------------------------------------------------------------------
+    // Disk Usage / Quota Meter Widget
+    // --------------------------------------------------------------------------
+    function updateDiskMeter(disk) {
+        if (!elements.diskMeterText || !elements.diskMeterBar) return;
+        if (!disk || !disk.available) {
+            elements.diskMeterText.textContent = 'Disk: N/A';
+            elements.diskMeterBar.style.width = '0%';
+            elements.diskMeterBar.className = 'disk-meter-bar';
+            if (elements.diskMeter) elements.diskMeter.title = 'Kapasitas disk tidak dapat dideteksi';
+            return;
+        }
+
+        const pct = typeof disk.percentage === 'number' ? disk.percentage : (parseFloat(disk.percent) || 0);
+        const usedHuman = disk.used_human || '0 B';
+        const totalHuman = disk.total_human || '0 B';
+        const freeHuman = disk.free_human || '0 B';
+
+        elements.diskMeterText.textContent = `Disk: ${usedHuman} / ${totalHuman}`;
+        elements.diskMeterBar.style.width = `${Math.min(100, Math.max(0, pct))}%`;
+
+        elements.diskMeterBar.className = 'disk-meter-bar';
+        if (pct >= 90) {
+            elements.diskMeterBar.classList.add('danger');
+        } else if (pct >= 70) {
+            elements.diskMeterBar.classList.add('warn');
+        }
+
+        if (elements.diskMeter) {
+            elements.diskMeter.title = `Kapasitas Disk: ${usedHuman} terpakai dari ${totalHuman} (${pct}%)\nTersedia: ${freeHuman}`;
+        }
+    }
+
+    async function fetchDiskUsage() {
+        try {
+            const data = await requestApi('?action=disk_usage');
+            if (data) updateDiskMeter(data);
+        } catch (e) {}
+    }
+
+    // --------------------------------------------------------------------------
+    // 1-Click File/Folder Duplication
+    // --------------------------------------------------------------------------
+    async function duplicateSingleItem(virtualPath) {
+        if (!virtualPath) return;
+
+        const formData = new FormData();
+        formData.append('csrf_token', state.csrfToken);
+        formData.append('path', virtualPath);
+
+        const data = await requestApi('?action=duplicate', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (data && data.success) {
+            showToast(data.message || `Berhasil menduplikat: ${data.copy_name}`, 'success');
+            loadDirectory(state.currentPath, false);
+            fetchDiskUsage();
+        } else {
+            showToast(data?.message || 'Gagal menduplikat item.', 'error');
+        }
+    }
+
+    async function handleDuplicateSelected() {
+        const paths = Array.from(state.selectedPaths);
+        if (paths.length === 0) return;
+
+        if (paths.length === 1) {
+            await duplicateSingleItem(paths[0]);
+            return;
+        }
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const p of paths) {
+            const formData = new FormData();
+            formData.append('csrf_token', state.csrfToken);
+            formData.append('path', p);
+            const data = await requestApi('?action=duplicate', { method: 'POST', body: formData });
+            if (data && data.success) {
+                successCount++;
+            } else {
+                failCount++;
+            }
+        }
+
+        if (successCount > 0) {
+            showToast(`Berhasil menduplikat ${successCount} item.${failCount > 0 ? ` (${failCount} gagal)` : ''}`, 'success');
+            loadDirectory(state.currentPath, false);
+            fetchDiskUsage();
+        } else {
+            showToast('Gagal menduplikat item terpilih.', 'error');
+        }
+    }
+
+    // --------------------------------------------------------------------------
+    // In-Browser Syntax Highlighting Engine (Zero Dependencies)
+    // --------------------------------------------------------------------------
+    function detectLanguage(filePath) {
+        if (!filePath) return 'plain';
+        const ext = filePath.split('.').pop().toLowerCase();
+        switch (ext) {
+            case 'php':
+            case 'phtml':
+            case 'php7':
+            case 'php8':
+                return 'php';
+            case 'js':
+            case 'mjs':
+            case 'cjs':
+            case 'ts':
+            case 'jsx':
+            case 'tsx':
+                return 'javascript';
+            case 'json':
+                return 'json';
+            case 'html':
+            case 'htm':
+            case 'svg':
+            case 'xml':
+                return 'html';
+            case 'css':
+            case 'scss':
+            case 'sass':
+            case 'less':
+                return 'css';
+            case 'sql':
+                return 'sql';
+            case 'sh':
+            case 'bash':
+            case 'zsh':
+                return 'shell';
+            default:
+                return 'plain';
+        }
+    }
+
+    function runTokenizer(code, rules, flags = 'g') {
+        const masterRegex = new RegExp(
+            rules.map(([type, regex]) => `(${regex})`).join('|'),
+            flags
+        );
+
+        let lastIndex = 0;
+        let html = '';
+        let match;
+
+        while ((match = masterRegex.exec(code)) !== null) {
+            if (match.index > lastIndex) {
+                html += escapeHtml(code.substring(lastIndex, match.index));
+            }
+
+            let matchedType = '';
+            for (let i = 0; i < rules.length; i++) {
+                if (match[i + 1] !== undefined) {
+                    matchedType = rules[i][0];
+                    break;
+                }
+            }
+
+            const matchedText = match[0];
+            if (matchedType) {
+                html += `<span class="${matchedType}">${escapeHtml(matchedText)}</span>`;
+            } else {
+                html += escapeHtml(matchedText);
+            }
+
+            lastIndex = masterRegex.lastIndex;
+            if (matchedText.length === 0) {
+                masterRegex.lastIndex++;
+            }
+        }
+
+        if (lastIndex < code.length) {
+            html += escapeHtml(code.substring(lastIndex));
+        }
+
+        return html;
+    }
+
+    function highlightSyntax(code, lang) {
+        if (!code) return '';
+        if (lang === 'plain') return escapeHtml(code);
+
+        const safeCode = code.endsWith('\n') ? code + ' ' : code;
+
+        if (lang === 'json') {
+            return runTokenizer(safeCode, [
+                ['tok-prop', '"(?:\\\\.|[^"\\\\])*"(?=\\s*:)'],
+                ['tok-string', '"(?:\\\\.|[^"\\\\])*"'],
+                ['tok-number', '-?\\b\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b'],
+                ['tok-keyword', '\\b(?:true|false|null)\\b'],
+                ['tok-punct', '[\\{\\}\\[\\],:]']
+            ]);
+        }
+
+        if (lang === 'html') {
+            return runTokenizer(safeCode, [
+                ['tok-comment', '<!--[\\s\\S]*?-->'],
+                ['tok-string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\''],
+                ['tok-tag', '</?[a-zA-Z0-9-]+|/?>'],
+                ['tok-attr', '\\b[a-zA-Z0-9_-]+(?=\\s*=)'],
+                ['tok-punct', '[=<>]']
+            ]);
+        }
+
+        if (lang === 'css') {
+            return runTokenizer(safeCode, [
+                ['tok-comment', '/\\*[\\s\\S]*?\\*/'],
+                ['tok-string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\''],
+                ['tok-number', '#[0-9a-fA-F]{3,8}\\b|-?\\b\\d+(?:\\.\\d+)?(?:px|em|rem|%|vh|vw|s|ms|deg|fr)?\\b'],
+                ['tok-prop', '[a-zA-Z-]+(?=\\s*:)'],
+                ['tok-keyword', '@[a-zA-Z-]+|:[a-zA-Z-]+'],
+                ['tok-punct', '[\\{\\}\\(\\);:,]']
+            ]);
+        }
+
+        if (lang === 'sql') {
+            return runTokenizer(safeCode, [
+                ['tok-comment', '--[^\\r\\n]*|/\\*[\\s\\S]*?\\*/'],
+                ['tok-string', '\'(?:[^\']|\'\')*\'|"(?:[^"]|"")*"'],
+                ['tok-number', '\\b\\d+(?:\\.\\d+)?\\b'],
+                ['tok-keyword', '\\b(?:SELECT|FROM|WHERE|INSERT|INTO|UPDATE|DELETE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|AND|OR|NOT|IN|AS|BY|ORDER|GROUP|HAVING|LIMIT|OFFSET|CREATE|TABLE|DROP|ALTER|ADD|INDEX|PRIMARY|KEY|FOREIGN|REFERENCES|DEFAULT|NULL|SET|VALUES|UNION|ALL|DISTINCT|CASE|WHEN|THEN|ELSE|END|EXISTS|LIKE|BETWEEN|IS)\\b'],
+                ['tok-type', '\\b(?:INT|INTEGER|BIGINT|VARCHAR|CHAR|TEXT|DATETIME|DATE|TIMESTAMP|DECIMAL|FLOAT|DOUBLE|BOOLEAN|BLOB)\\b'],
+                ['tok-func', '\\b[a-zA-Z_][a-zA-Z0-9_]*(?=\\s*\\()'],
+                ['tok-punct', '[\\(\\),;]']
+            ], 'gi');
+        }
+
+        if (lang === 'shell') {
+            return runTokenizer(safeCode, [
+                ['tok-comment', '#[^\\r\\n]*'],
+                ['tok-string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\''],
+                ['tok-var', '\\$[a-zA-Z0-9_]+|\\$\\{[^}]+\\}'],
+                ['tok-number', '\\b\\d+\\b'],
+                ['tok-keyword', '\\b(?:if|then|else|elif|fi|for|in|do|done|while|until|case|esac|function|return|exit|source|alias|export|local|echo|read|cd|pwd|ls|rm|cp|mv|mkdir|touch|chmod|chown|grep|cat|sed|awk|curl|wget)\\b'],
+                ['tok-op', '[|&><;!+=]+']
+            ]);
+        }
+
+        if (lang === 'php') {
+            return runTokenizer(safeCode, [
+                ['tok-comment', '/\\*[\\s\\S]*?\\*/|//[^\\r\\n]*|#[^\\r\\n]*'],
+                ['tok-string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\''],
+                ['tok-var', '\\$[a-zA-Z_\\x7f-\\xff][a-zA-Z0-9_\\x7f-\\xff]*'],
+                ['tok-number', '\\b\\d+(?:\\.\\d+)?\\b'],
+                ['tok-keyword', '\\b(?:echo|print|if|else|elseif|while|do|for|foreach|as|function|return|switch|case|default|break|continue|require|require_once|include|include_once|class|interface|trait|extends|implements|public|protected|private|static|final|abstract|const|new|try|catch|finally|throw|use|namespace|global|var|isset|empty|exit|die|null|true|false)\\b'],
+                ['tok-type', '\\b(?:int|string|float|bool|array|object|callable|iterable|void|mixed|never)\\b'],
+                ['tok-func', '\\b[a-zA-Z_][a-zA-Z0-9_]*(?=\\s*\\()'],
+                ['tok-tag', '<\\?php|\\?>'],
+                ['tok-op', '[+\\-*/%=!<>|&~^?:]+']
+            ]);
+        }
+
+        if (lang === 'javascript') {
+            return runTokenizer(safeCode, [
+                ['tok-comment', '/\\*[\\s\\S]*?\\*/|//[^\\r\\n]*'],
+                ['tok-string', '`(?:\\\\.|[^`\\\\])*`|"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\''],
+                ['tok-number', '\\b\\d+(?:\\.\\d+)?\\b'],
+                ['tok-keyword', '\\b(?:const|let|var|function|return|if|else|for|while|do|switch|case|default|break|continue|new|class|extends|super|this|import|export|from|try|catch|finally|throw|async|await|yield|typeof|instanceof|void|delete|in|of|null|undefined|true|false|NaN|Infinity)\\b'],
+                ['tok-type', '\\b(?:Array|Object|String|Number|Boolean|Function|Promise|Map|Set|JSON|Math|Date|RegExp|Error|Console|document|window)\\b'],
+                ['tok-func', '\\b[a-zA-Z_$][a-zA-Z0-9_$]*(?=\\s*\\()'],
+                ['tok-op', '[+\\-*/%=!<>|&~^?:]+']
+            ]);
+        }
+
+        return escapeHtml(safeCode);
+    }
+
+    function syncEditorHighlight() {
+        if (!elements.editorContent || !elements.editorCode) return;
+
+        if (!state.editorHighlight) {
+            if (elements.editorContainer) elements.editorContainer.classList.add('syntax-off');
+            if (elements.btnEditorHighlight) {
+                elements.btnEditorHighlight.classList.remove('active');
+                elements.btnEditorHighlight.textContent = 'Syntax: OFF';
+            }
+            return;
+        }
+
+        if (elements.editorContainer) elements.editorContainer.classList.remove('syntax-off');
+        if (elements.btnEditorHighlight) {
+            elements.btnEditorHighlight.classList.add('active');
+            elements.btnEditorHighlight.textContent = 'Syntax: ON';
+        }
+
+        let lang = elements.editorLangSelect?.value || 'auto';
+        if (lang === 'auto') {
+            const path = elements.editorFilePath?.value || '';
+            lang = detectLanguage(path);
+        }
+
+        const code = elements.editorContent.value;
+        elements.editorCode.innerHTML = highlightSyntax(code, lang);
+
+        if (elements.editorPre) {
+            elements.editorPre.scrollTop = elements.editorContent.scrollTop;
+            elements.editorPre.scrollLeft = elements.editorContent.scrollLeft;
         }
     }
 

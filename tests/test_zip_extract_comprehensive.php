@@ -261,12 +261,13 @@ runTest(
     "index.php, config.php, dan app/ user 100% diizinkan diekstrak"
 );
 
-// 2h. Full Self-Package Extraction to Root
-$resPkgCheck = ZipManager::extractZip('/hosting-file-manager.zip', '/', 'overwrite');
+// 2h. Full Self-Package Extraction to Test Directory (Anti False-Positive)
+$destPkgDir = $testVirtualDir . '/out_pkg';
+$resPkgCheck = ZipManager::extractZip('/hosting-file-manager.zip', $destPkgDir, 'overwrite');
 runTest(
-    "Anti False-Positive: Full package extract to root",
+    "Anti False-Positive: Full package extract to test dir",
     $resPkgCheck['success'] && $resPkgCheck['extracted_count'] > 0,
-    "Paket rilis hosting-file-manager.zip berhasil diekstrak ke root: " . $resPkgCheck['message']
+    "Paket rilis hosting-file-manager.zip berhasil diekstrak: " . $resPkgCheck['message']
 );
 
 // ----------------------------------------------------------------------

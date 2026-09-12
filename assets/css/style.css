@@ -362,6 +362,80 @@ body {
     border-color: #2563eb;
 }
 
+/* Disk Usage / Quota Meter Widget */
+.disk-meter {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid #334155;
+    padding: 3px 8px;
+    border-radius: 6px;
+    min-width: 140px;
+    cursor: default;
+}
+
+.disk-meter-info {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: #94a3b8;
+    line-height: 1;
+}
+
+.disk-meter-svg {
+    stroke: #38bdf8;
+    flex-shrink: 0;
+}
+
+.disk-meter-track {
+    height: 4px;
+    background: #1e293b;
+    border-radius: 2px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.disk-meter-bar {
+    height: 100%;
+    width: 0%;
+    background: #22c55e;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    border-radius: 2px;
+}
+
+.disk-meter-bar.warn {
+    background: #f59e0b;
+}
+
+.disk-meter-bar.danger {
+    background: #ef4444;
+}
+
+/* Theme Toggle Button */
+.btn-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-theme-toggle:hover {
+    background: #334155;
+    color: #f8fafc;
+    border-color: #475569;
+}
+
 /* ==========================================================================
    Toolbar & Navigation Bar
    ========================================================================== */
@@ -1440,6 +1514,19 @@ body {
     gap: 8px;
 }
 
+.editor-lang-select {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    line-height: 1.2;
+}
+
 .editor-btn-tool {
     background: #ffffff;
     border: 1px solid #cbd5e1;
@@ -1488,14 +1575,40 @@ body {
 
 .editor-container {
     flex: 1;
-    display: flex;
+    display: block;
     position: relative;
     height: 100%;
     min-height: 0;
+    background: #1e1e1e;
+    overflow: hidden;
+}
+
+.code-editor-pre {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    font-family: Consolas, Monaco, "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    tab-size: 4;
+    white-space: pre;
+    overflow: hidden;
+    pointer-events: none;
+    box-sizing: border-box;
+    color: #d4d4d4;
+    z-index: 1;
 }
 
 .code-editor-textarea {
-    flex: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     min-height: 0;
@@ -1503,8 +1616,9 @@ body {
     border: none;
     outline: none;
     resize: none;
-    background: #1e1e1e;
-    color: #d4d4d4;
+    background: transparent;
+    color: transparent;
+    caret-color: #f8fafc;
     font-family: Consolas, Monaco, "Courier New", monospace;
     font-size: 13px;
     line-height: 1.5;
@@ -1512,12 +1626,48 @@ body {
     tab-size: 4;
     white-space: pre;
     overflow: auto;
+    z-index: 2;
 }
 
-.code-editor-textarea.is-wrapped {
+.code-editor-textarea::selection {
+    background: rgba(59, 130, 246, 0.4);
+    color: transparent;
+}
+
+.code-editor-textarea.is-wrapped,
+.editor-container.is-wrapped .code-editor-pre,
+.editor-container.is-wrapped .code-editor-textarea {
     white-space: pre-wrap !important;
     word-break: break-all;
 }
+
+.editor-container.syntax-off .code-editor-pre {
+    display: none;
+}
+
+.editor-container.syntax-off .code-editor-textarea {
+    color: #d4d4d4;
+    background: #1e1e1e;
+}
+
+.editor-container.syntax-off .code-editor-textarea::selection {
+    background: rgba(59, 130, 246, 0.4);
+    color: #ffffff;
+}
+
+/* Syntax Highlighting Tokens (VS Code Dark+ inspired) */
+.tok-comment { color: #6a9955; font-style: italic; }
+.tok-string  { color: #ce9178; }
+.tok-number  { color: #b5cea8; }
+.tok-kw, .tok-keyword { color: #569cd6; font-weight: 600; }
+.tok-type    { color: #4ec9b0; }
+.tok-func    { color: #dcdcaa; }
+.tok-var     { color: #9cdcfe; }
+.tok-tag     { color: #4ec9b0; }
+.tok-attr    { color: #92c5fd; }
+.tok-prop    { color: #9cdcfe; }
+.tok-punct   { color: #808080; }
+.tok-op      { color: #d4d4d4; }
 
 .editor-footer {
     display: flex;
@@ -1752,3 +1902,194 @@ body {
         display: none;
     }
 }
+
+/* ==========================================================================
+   Dark Mode Theme System
+   ========================================================================== */
+[data-theme="dark"] {
+    --border: #334155;
+    --border-light: #1e293b;
+    --border-dark: #475569;
+    
+    --bg-main: #0b1120;
+    --bg-white: #0f172a;
+    --bg-card: #0f172a;
+    --bg-hover: #1e293b;
+    
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --text-subtle: #64748b;
+    
+    --primary-light: #082f49;
+    --primary-border: #0369a1;
+}
+
+[data-theme="dark"] body {
+    background-color: #0b1120;
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .app-toolbar,
+[data-theme="dark"] .app-location-bar,
+[data-theme="dark"] .app-status-bar,
+[data-theme="dark"] .file-table thead,
+[data-theme="dark"] .selection-toolbar {
+    background: #0f172a;
+    border-color: #1e293b;
+}
+
+[data-theme="dark"] .app-location-bar {
+    background: #090e1a;
+}
+
+[data-theme="dark"] .location-label {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .breadcrumb-item {
+    color: #38bdf8;
+}
+
+[data-theme="dark"] .breadcrumb-item.active {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .file-table th {
+    background: #0f172a;
+    color: #94a3b8;
+    border-bottom: 1px solid #1e293b;
+}
+
+[data-theme="dark"] .file-table td {
+    border-bottom: 1px solid #1e293b;
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .file-table tr:hover td {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .file-table tr.selected td {
+    background: #0c2d48 !important;
+}
+
+[data-theme="dark"] .file-name-link {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .file-row-actions button,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .editor-btn-tool {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .file-row-actions button:hover,
+[data-theme="dark"] .btn-secondary:hover,
+[data-theme="dark"] .editor-btn-tool:hover {
+    background: #334155;
+    color: #f8fafc;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .modal-box {
+    background: #0f172a;
+    border-color: #334155;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer,
+[data-theme="dark"] .editor-toolbar,
+[data-theme="dark"] .editor-footer {
+    background: #090e1a;
+    border-color: #1e293b;
+}
+
+[data-theme="dark"] .modal-header h3 {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .modal-close {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .modal-close:hover {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .toolbar-search input,
+[data-theme="dark"] .editor-lang-select {
+    background: #090e1a;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .toolbar-search input:focus,
+[data-theme="dark"] .editor-lang-select:focus {
+    border-color: #38bdf8;
+}
+
+[data-theme="dark"] .context-menu {
+    background: #0f172a;
+    border-color: #334155;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .context-menu-item {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .context-menu-item:hover {
+    background: #1e293b;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .context-menu-divider {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .tree-container,
+[data-theme="dark"] .upload-dropzone,
+[data-theme="dark"] .compress-items-box,
+[data-theme="dark"] #deleteMultiItemsContainer,
+[data-theme="dark"] #copyMoveMultiItemsContainer {
+    background: #090e1a;
+    border-color: #1e293b;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .chmod-matrix-container {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .chmod-table th {
+    background: #090e1a;
+    color: #cbd5e1;
+    border-color: #1e293b;
+}
+
+[data-theme="dark"] .chmod-table td {
+    border-color: #1e293b;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] #chmodRwxDisplay {
+    background: #090e1a;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .login-card {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .login-body label {
+    color: #cbd5e1;
+}
+
