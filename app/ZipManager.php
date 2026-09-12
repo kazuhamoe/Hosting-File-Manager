@@ -206,6 +206,9 @@ class ZipManager
             ];
         }
 
+        // Berikan izin penuh pada file zip agar dapat dibaca/diekstrak tanpa kendala umask server
+        @chmod($zipReal, 0777);
+
         $destReal = Security::resolvePath($destRelativePath, false);
         if ($destReal === null) {
             return [
@@ -215,12 +218,15 @@ class ZipManager
         }
 
         if (!file_exists($destReal)) {
-            if (!@mkdir($destReal, 0755, true) && !is_dir($destReal)) {
+            if (!@mkdir($destReal, 0777, true) && !is_dir($destReal)) {
                 return [
                     'success' => false,
                     'message' => 'Gagal membuat folder tujuan ekstraksi. Periksa permission server.'
                 ];
             }
+            @chmod($destReal, 0777);
+        } else {
+            @chmod($destReal, 0777);
         }
         $destReal = realpath($destReal);
         if ($destReal === false || !is_dir($destReal)) {
@@ -261,7 +267,7 @@ class ZipManager
 
             if ($entry['is_dir']) {
                 if (!is_dir($targetPath)) {
-                    if (!@mkdir($targetPath, 0755, true) && !is_dir($targetPath)) {
+                    if (!@mkdir($targetPath, 0777, true) && !is_dir($targetPath)) {
                         $zip->close();
                         return [
                             'success' => false,
@@ -269,19 +275,21 @@ class ZipManager
                         ];
                     }
                 }
+                @chmod($targetPath, 0777);
                 continue;
             }
 
             // Pastikan parent directory ada
             $parentDir = dirname($targetPath);
             if (!is_dir($parentDir)) {
-                if (!@mkdir($parentDir, 0755, true) && !is_dir($parentDir)) {
+                if (!@mkdir($parentDir, 0777, true) && !is_dir($parentDir)) {
                     $zip->close();
                     return [
                         'success' => false,
                         'message' => 'Gagal membuat subdirektori untuk ekstraksi file.'
                     ];
                 }
+                @chmod($parentDir, 0777);
             }
 
             // Penanganan jika file sudah ada
@@ -306,7 +314,7 @@ class ZipManager
                             $oldHash = !empty($hM[1]) ? $hM[1] : '';
                             if (!empty($oldHash)) {
                                 if (!is_dir(dirname($possibleCredFile))) {
-                                    @mkdir(dirname($possibleCredFile), 0755, true);
+                                    @mkdir(dirname($possibleCredFile), 0777, true);
                                 }
                                 @file_put_contents($possibleCredFile, json_encode([
                                     'username' => $oldUser,
@@ -314,6 +322,7 @@ class ZipManager
                                     'updated_at' => date('Y-m-d H:i:s'),
                                     'updated_by_ip' => 'auto-migrated-zip-extract'
                                 ], JSON_PRETTY_PRINT));
+                                @chmod($possibleCredFile, 0777);
                             }
                         }
                     }
@@ -352,6 +361,8 @@ class ZipManager
 
             fclose($stream);
             fclose($outFp);
+            // Berikan izin penuh (0777 / full centang) pada berkas hasil ekstraksi
+            @chmod($targetPath, 0777);
             $extractedCount++;
         }
 
@@ -470,6 +481,9 @@ class ZipManager
         }
 
         $zip->close();
+        if (file_exists($zipFilePath)) {
+            @chmod($zipFilePath, 0777);
+        }
 
         if ($addedCount === 0) {
             if (file_exists($zipFilePath)) {

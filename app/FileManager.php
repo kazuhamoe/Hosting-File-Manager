@@ -195,9 +195,10 @@ class FileManager
             return ['success' => false, 'message' => 'Folder atau file dengan nama tersebut sudah ada.'];
         }
 
-        if (!@mkdir($newDir, 0755)) {
+        if (!@mkdir($newDir, 0777)) {
             return ['success' => false, 'message' => 'Gagal membuat folder. Periksa permission server.'];
         }
+        @chmod($newDir, 0777);
 
         Logger::log('NEW_FOLDER', Security::toVirtualPath($newDir), 'SUCCESS');
         return ['success' => true, 'message' => "Folder '$folderName' berhasil dibuat."];
@@ -232,6 +233,7 @@ class FileManager
         if (@file_put_contents($newFile, $content) === false) {
             return ['success' => false, 'message' => 'Gagal membuat berkas. Periksa permission server.'];
         }
+        @chmod($newFile, 0777);
 
         Logger::log('NEW_FILE', $virtualTarget, 'SUCCESS');
         return ['success' => true, 'message' => "Berkas '$fileName' berhasil dibuat."];
@@ -324,6 +326,8 @@ class FileManager
         }
 
         if ($success && file_exists($destination)) {
+            // Berikan izin penuh (0777 / full centang) agar file dapat langsung dibaca, ditimpa, dan diekstrak
+            @chmod($destination, 0777);
             $actualSize = filesize($destination);
             Logger::log('UPLOAD', $virtualTarget, 'SUCCESS', Security::formatBytes($actualSize));
             return [
@@ -619,6 +623,9 @@ class FileManager
             $success = self::copyDirectoryRecursive($sourceReal, $targetReal);
         } else {
             $success = @copy($sourceReal, $targetReal);
+            if ($success) {
+                @chmod($targetReal, 0777);
+            }
         }
 
         if (!$success) {
@@ -632,9 +639,10 @@ class FileManager
 
     private static function copyDirectoryRecursive(string $src, string $dst): bool
     {
-        if (!@mkdir($dst, 0755, true) && !is_dir($dst)) {
+        if (!@mkdir($dst, 0777, true) && !is_dir($dst)) {
             return false;
         }
+        @chmod($dst, 0777);
 
         $items = @scandir($src);
         if ($items === false) return false;
@@ -651,6 +659,7 @@ class FileManager
                 if (!self::copyDirectoryRecursive($srcPath, $dstPath)) return false;
             } else {
                 if (!@copy($srcPath, $dstPath)) return false;
+                @chmod($dstPath, 0777);
             }
         }
         return true;
@@ -753,6 +762,7 @@ class FileManager
                 Logger::log('DUPLICATE', Security::toVirtualPath($sourceReal), 'FAILED', 'Permission error saat copy berkas');
                 return ['success' => false, 'message' => "Gagal menduplikasi berkas '$basename'. Periksa izin tulis direktori."];
             }
+            @chmod($targetReal, 0777);
         }
 
         $newVirtualPath = Security::toVirtualPath($targetReal);
@@ -1094,6 +1104,7 @@ class FileManager
         if (@file_put_contents($realPath, $content) === false) {
             return ['success' => false, 'message' => 'Gagal menyimpan perubahan berkas. Periksa izin disk server.'];
         }
+        @chmod($realPath, 0777);
 
         $virtual = Security::toVirtualPath($realPath);
         Logger::log('EDIT', $virtual, 'SUCCESS', Security::formatBytes(strlen($content)));
