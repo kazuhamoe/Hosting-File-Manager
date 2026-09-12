@@ -220,10 +220,10 @@ if (!Auth::check()) {
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
             <meta name="theme-color" content="#070b14">
             <title>Setup Administrator — Hosting File Manager</title>
-            <link rel="icon" type="image/svg+xml" href="favicon.svg">
-            <link rel="alternate icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-            <link rel="alternate icon" type="image/x-icon" href="favicon.ico">
-            <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+            <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+            <link rel="alternate icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32x32.png">
+            <link rel="alternate icon" type="image/x-icon" href="assets/icons/favicon.ico">
+            <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
             <link rel="stylesheet" href="assets/css/style.css">
         </head>
         <body>
@@ -428,10 +428,10 @@ if (!Auth::check()) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
         <meta name="theme-color" content="#070b14">
         <title>Login Administrator — Hosting File Manager</title>
-        <link rel="icon" type="image/svg+xml" href="favicon.svg">
-        <link rel="alternate icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+        <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+        <link rel="alternate icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32x32.png">
         <link rel="alternate icon" type="image/x-icon" href="favicon.ico">
-        <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
         <link rel="stylesheet" href="assets/css/style.css">
     </head>
     <body>
@@ -1065,10 +1065,10 @@ if (!empty($action)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hosting File Manager</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="alternate icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+    <link rel="alternate icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32x32.png">
     <link rel="alternate icon" type="image/x-icon" href="favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
     <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
     <?php
     $cssVer = (string)(@filemtime(__DIR__ . '/assets/css/style.css') ?: time());

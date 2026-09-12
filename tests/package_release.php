@@ -25,11 +25,7 @@ $zip->addFile($baseDir . '/config.php', 'config.php');
 $zip->addFile($baseDir . '/updater.php', 'updater.php');
 $zip->addFile($baseDir . '/README.md', 'README.md');
 if (file_exists($baseDir . '/favicon.ico')) $zip->addFile($baseDir . '/favicon.ico', 'favicon.ico');
-if (file_exists($baseDir . '/favicon.svg')) $zip->addFile($baseDir . '/favicon.svg', 'favicon.svg');
-if (file_exists($baseDir . '/favicon-32x32.png')) $zip->addFile($baseDir . '/favicon-32x32.png', 'favicon-32x32.png');
-if (file_exists($baseDir . '/favicon-16x16.png')) $zip->addFile($baseDir . '/favicon-16x16.png', 'favicon-16x16.png');
-if (file_exists($baseDir . '/apple-touch-icon.png')) $zip->addFile($baseDir . '/apple-touch-icon.png', 'apple-touch-icon.png');
-echo "  + index.php\n  + config.php\n  + updater.php\n  + README.md\n  + favicons (.ico, .svg, .png)\n";
+echo "  + index.php\n  + config.php\n  + updater.php\n  + README.md\n  + favicon.ico\n";
 
 // 2. Core App Classes & app/index.php
 $zip->addEmptyDir('app');
@@ -43,9 +39,15 @@ foreach ($appFiles as $file) {
 $zip->addEmptyDir('assets');
 $zip->addEmptyDir('assets/css');
 $zip->addEmptyDir('assets/js');
+$zip->addEmptyDir('assets/icons');
 $zip->addFile($baseDir . '/assets/css/style.css', 'assets/css/style.css');
 $zip->addFile($baseDir . '/assets/js/app.js', 'assets/js/app.js');
-echo "  + assets/css/style.css\n  + assets/js/app.js\n";
+
+$iconFiles = glob($baseDir . '/assets/icons/*.*');
+foreach ($iconFiles as $ic) {
+    $zip->addFile($ic, 'assets/icons/' . basename($ic));
+}
+echo "  + assets/css/style.css\n  + assets/js/app.js\n  + assets/icons/ (all formats)\n";
 
 // 4. Storage (Clean production state)
 $zip->addEmptyDir('storage');
