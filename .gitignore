@@ -15,11 +15,11 @@ cookies.txt
 sandbox/
 test_*/
 
-# Distribution packages (release package is tracked, user zips ignored)
+# Distribution packages / archives
 *.zip
-!hosting-file-manager.zip
 *.tar.gz
 *.rar
+*.7z
 
 # Operating System & IDE caches
 .DS_Store
