@@ -31,3 +31,8 @@ Desktop.ini
 *.swp
 *~
 *.bak
+
+# AI & Internal assistant artifacts
+walkthrough.md
+implementation_plan.md
+
