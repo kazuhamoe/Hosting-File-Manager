@@ -81,6 +81,10 @@ assertCondition(strpos($cssContent, '.disk-meter') !== false, "Disk meter stylin
 assertCondition(strpos($cssContent, '.btn-theme-toggle') !== false, "Theme toggle button styling found in style.css");
 assertCondition(strpos($cssContent, '.code-editor-pre') !== false, "Overlay pre styling found in style.css");
 assertCondition(strpos($cssContent, '.tok-kw') !== false, "Syntax token styles found in style.css");
+assertCondition(strpos($cssContent, '[data-theme="dark"] .file-table tr') !== false, "Dark theme file table row background styling found");
+assertCondition(strpos($cssContent, '[data-theme="dark"] .file-table tr:nth-child(even)') !== false, "Dark theme zebra striping styling found");
+assertCondition(strpos($cssContent, '[data-theme="dark"] .file-table-container') !== false, "Dark theme file table container styling found");
+assertCondition(strpos($cssContent, '[data-theme="dark"] .dropdown-menu') !== false, "Dark theme dropdown menu styling found");
 
 $indexContent = file_get_contents(__DIR__ . '/../index.php');
 assertCondition(strpos($indexContent, 'id="diskMeter"') !== false, "diskMeter element present in index.php");

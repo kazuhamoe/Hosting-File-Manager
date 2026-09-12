@@ -2702,21 +2702,22 @@
     // Disk Usage / Quota Meter Widget
     // --------------------------------------------------------------------------
     function updateDiskMeter(disk) {
-        if (!elements.diskMeterText || !elements.diskMeterBar) return;
-        if (!disk || !disk.available) {
-            elements.diskMeterText.textContent = 'Disk: N/A';
-            elements.diskMeterBar.style.width = '0%';
-            elements.diskMeterBar.className = 'disk-meter-bar';
-            if (elements.diskMeter) elements.diskMeter.title = 'Kapasitas disk tidak dapat dideteksi';
+        if (!elements.diskMeter) return;
+        if (!disk || !disk.available || disk.enabled === false) {
+            elements.diskMeter.style.display = 'none';
             return;
         }
+
+        elements.diskMeter.style.display = '';
+        if (!elements.diskMeterText || !elements.diskMeterBar) return;
 
         const pct = typeof disk.percentage === 'number' ? disk.percentage : (parseFloat(disk.percent) || 0);
         const usedHuman = disk.used_human || '0 B';
         const totalHuman = disk.total_human || '0 B';
         const freeHuman = disk.free_human || '0 B';
 
-        elements.diskMeterText.textContent = `Disk: ${usedHuman} / ${totalHuman}`;
+        const labelPrefix = disk.is_quota ? 'Quota' : 'Disk';
+        elements.diskMeterText.textContent = `${labelPrefix}: ${usedHuman} / ${totalHuman}`;
         elements.diskMeterBar.style.width = `${Math.min(100, Math.max(0, pct))}%`;
 
         elements.diskMeterBar.className = 'disk-meter-bar';
@@ -2726,12 +2727,13 @@
             elements.diskMeterBar.classList.add('warn');
         }
 
-        if (elements.diskMeter) {
-            elements.diskMeter.title = `Kapasitas Disk: ${usedHuman} terpakai dari ${totalHuman} (${pct}%)\nTersedia: ${freeHuman}`;
-        }
+        elements.diskMeter.title = disk.is_quota
+            ? `Kuota Hosting: ${usedHuman} terpakai dari ${totalHuman} (${pct}%)\nSisa Kuota: ${freeHuman}`
+            : `Kapasitas Disk: ${usedHuman} terpakai dari ${totalHuman} (${pct}%)\nTersedia: ${freeHuman}`;
     }
 
     async function fetchDiskUsage() {
+        if (!elements.diskMeter) return;
         try {
             const data = await requestApi('?action=disk_usage');
             if (data) updateDiskMeter(data);

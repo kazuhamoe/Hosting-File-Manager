@@ -104,3 +104,20 @@ define('TEXT_PREVIEW_EXTENSIONS', [
     'sql', 'env', 'htaccess', 'ini', 'log', 'svg', 'sh', 'bat', 'cmd',
     'yml', 'yaml', 'conf'
 ]);
+
+// --------------------------------------------------------------------------
+// 6. DISK USAGE & QUOTA WIDGET
+// --------------------------------------------------------------------------
+/**
+ * Pada server hosting bersama (Shared Hosting / cPanel), fungsi bawaan PHP
+ * membaca total seluruh partisi harddisk fisik server pusat hosting (contoh: 2.84 TB),
+ * bukan batas kuota paket hosting akun Anda.
+ *
+ * - Set false untuk MENYEMBUNYIKAN widget disk (Sangat disarankan pada shared hosting).
+ * - Set true jika Anda menggunakan VPS / Dedicated Server atau ingin memantau disk server.
+ * - Anda juga dapat menentukan kuota akun hosting Anda secara manual dalam MB pada
+ *   DISK_QUOTA_MB (contoh: 5120 untuk kuota 5 GB, 10240 untuk 10 GB, 0 = ikuti partisi server).
+ */
+define('SHOW_DISK_USAGE', false); // Disembunyikan secara default agar tidak menampilkan kapasitas drive 2.8 TB server pusat
+define('DISK_QUOTA_MB', 0); // 0 = otomatis ikuti partisi, atau isi kuota paket hosting Anda dalam MB (contoh: 5120 = 5 GB)
+

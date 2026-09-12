@@ -772,13 +772,56 @@ class FileManager
      */
     public static function getDiskUsage(): array
     {
+        // Jika dinonaktifkan di konfigurasi (disarankan pada shared hosting agar tidak menampilkan kapasitas drive 2.8 TB server)
+        if (defined('SHOW_DISK_USAGE') && !SHOW_DISK_USAGE) {
+            return [
+                'available' => false,
+                'enabled'   => false,
+                'message'   => 'Disk widget dinonaktifkan di konfigurasi.'
+            ];
+        }
+
         $root = Security::getRoot();
+
+        // Jika kuota manual ditentukan di config.php (contoh: 5120 MB = 5 GB)
+        if (defined('DISK_QUOTA_MB') && DISK_QUOTA_MB > 0) {
+            $quotaBytes = (float)DISK_QUOTA_MB * 1024 * 1024;
+            $stats = self::getFolderStats('/');
+            $usedBytes = (float)($stats['size'] ?? 0);
+            $freeBytes = max(0.0, $quotaBytes - $usedBytes);
+            $percent = round(($usedBytes / $quotaBytes) * 100, 1);
+            $totalFormatted = Security::formatBytes($quotaBytes);
+            $usedFormatted = Security::formatBytes($usedBytes);
+            $freeFormatted = Security::formatBytes($freeBytes);
+
+            return [
+                'available'       => true,
+                'enabled'         => true,
+                'is_quota'        => true,
+                'total'           => $quotaBytes,
+                'total_bytes'     => $quotaBytes,
+                'total_formatted' => $totalFormatted,
+                'total_human'     => $totalFormatted,
+                'used'            => $usedBytes,
+                'used_bytes'      => $usedBytes,
+                'used_formatted'  => $usedFormatted,
+                'used_human'      => $usedFormatted,
+                'free'            => $freeBytes,
+                'free_bytes'      => $freeBytes,
+                'free_formatted'  => $freeFormatted,
+                'free_human'      => $freeFormatted,
+                'percent'         => $percent,
+                'percentage'      => $percent
+            ];
+        }
+
         $total = @disk_total_space($root);
         $free = @disk_free_space($root);
 
         if ($total === false || $total <= 0) {
             return [
                 'available'       => false,
+                'enabled'         => true,
                 'message'         => 'Informasi kapasitas disk tidak tersedia pada lingkungan server ini.'
             ];
         }

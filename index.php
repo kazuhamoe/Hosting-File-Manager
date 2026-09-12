@@ -710,7 +710,8 @@ if (!empty($action)) {
                 <span>Hosting File Manager</span>
             </div>
             <div class="header-user">
-                <!-- Disk Usage / Quota Meter Widget -->
+                <!-- Disk Usage / Quota Meter Widget (Hanya tampil jika SHOW_DISK_USAGE aktif di config.php) -->
+                <?php if (defined('SHOW_DISK_USAGE') && SHOW_DISK_USAGE): ?>
                 <div class="disk-meter" id="diskMeter" title="Kapasitas Disk Server">
                     <div class="disk-meter-info">
                         <svg class="disk-meter-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
@@ -720,6 +721,7 @@ if (!empty($action)) {
                         <div class="disk-meter-bar" id="diskMeterBar" style="width: 0%;"></div>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <!-- Theme Toggle Button -->
                 <button type="button" id="btnThemeToggle" class="btn-theme-toggle" title="Beralih Mode Gelap / Terang (Dark / Light)">
