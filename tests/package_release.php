@@ -24,7 +24,12 @@ $zip->addFile($baseDir . '/index.php', 'index.php');
 $zip->addFile($baseDir . '/config.php', 'config.php');
 $zip->addFile($baseDir . '/updater.php', 'updater.php');
 $zip->addFile($baseDir . '/README.md', 'README.md');
-echo "  + index.php\n  + config.php\n  + updater.php\n  + README.md\n";
+if (file_exists($baseDir . '/favicon.ico')) $zip->addFile($baseDir . '/favicon.ico', 'favicon.ico');
+if (file_exists($baseDir . '/favicon.svg')) $zip->addFile($baseDir . '/favicon.svg', 'favicon.svg');
+if (file_exists($baseDir . '/favicon-32x32.png')) $zip->addFile($baseDir . '/favicon-32x32.png', 'favicon-32x32.png');
+if (file_exists($baseDir . '/favicon-16x16.png')) $zip->addFile($baseDir . '/favicon-16x16.png', 'favicon-16x16.png');
+if (file_exists($baseDir . '/apple-touch-icon.png')) $zip->addFile($baseDir . '/apple-touch-icon.png', 'apple-touch-icon.png');
+echo "  + index.php\n  + config.php\n  + updater.php\n  + README.md\n  + favicons (.ico, .svg, .png)\n";
 
 // 2. Core App Classes & app/index.php
 $zip->addEmptyDir('app');
