@@ -117,6 +117,17 @@ body {
     padding: 24px;
 }
 
+.setup-welcome-banner {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: #0369a1;
+    line-height: 1.5;
+}
+
 .form-group {
     margin-bottom: 14px;
 }
@@ -2091,5 +2102,11 @@ body {
 
 [data-theme="dark"] .login-body label {
     color: #cbd5e1;
+}
+
+[data-theme="dark"] .setup-welcome-banner {
+    background: #082f49;
+    border-color: #0369a1;
+    color: #7dd3fc;
 }
 

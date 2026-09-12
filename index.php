@@ -142,9 +142,34 @@ function jsonResponse(array $data, int $statusCode = 200): void
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
 
 // --------------------------------------------------------------------------
-// PROSES AUTENTIKASI (LOGIN & LOGOUT)
+// PROSES AUTENTIKASI (LOGIN, SETUP AWAL, & LOGOUT)
 // --------------------------------------------------------------------------
-if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+$isSetupRequired = Auth::isSetupRequired();
+
+// Proses Wizard Pembuatan Akun Administrator Pertama Kali (Create Password)
+if ($isSetupRequired && $action === 'setup' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
+    $result = Auth::setupInitialCredentials($username, $password, $confirmPassword);
+
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+        jsonResponse($result, $result['success'] ? 200 : 400);
+    }
+
+    if ($result['success']) {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+        header('Location: ./');
+        exit;
+    }
+
+    $setupError = $result['message'];
+}
+
+// Proses Login Biasa
+if (!$isSetupRequired && $action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $result = Auth::login($username, $password);
@@ -174,15 +199,77 @@ if ($action === 'logout') {
 }
 
 // --------------------------------------------------------------------------
-// PROTEKSI AKSES: TAMPILKAN HALAMAN LOGIN JIKA BELUM TERAUTENTIKASI
+// PROTEKSI AKSES: TAMPILKAN FORM SETUP ATAU LOGIN JIKA BELUM TERAUTENTIKASI
 // --------------------------------------------------------------------------
 if (!Auth::check()) {
     // Jika request berupa API/AJAX, tolak dengan 401
-    if (!empty($action) && $action !== 'login') {
+    if (!empty($action) && $action !== 'login' && $action !== 'setup') {
         jsonResponse(['success' => false, 'message' => 'Sesi kedaluwarsa atau belum terautentikasi.'], 401);
     }
 
-    // Render Form Login Bersih & Klasik
+    if ($isSetupRequired) {
+        // TAMPILAN 1: WIZARD FIRST-TIME SETUP (CREATE PASSWORD)
+        ?>
+        <!DOCTYPE html>
+        <html lang="id">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Setup Administrator — Hosting File Manager</title>
+            <link rel="stylesheet" href="assets/css/style.css">
+        </head>
+        <body>
+            <div class="login-wrapper">
+                <div class="login-card" style="max-width: 420px;">
+                    <div class="login-header">
+                        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                        <div>
+                            <h1>Setup Administrator</h1>
+                            <p>Inisialisasi Pertama Hosting File Manager</p>
+                        </div>
+                    </div>
+                    <div class="login-body">
+                        <div class="setup-welcome-banner" style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; font-size: 12px; color: #0369a1; line-height: 1.5;">
+                            <strong>👋 Selamat Datang!</strong>
+                            <div style="margin-top: 2px;">File Manager baru saja dipasang di server hosting ini. Silakan buat username dan password administrator Anda untuk memulai.</div>
+                        </div>
+
+                        <?php if (!empty($setupError)): ?>
+                            <div class="alert alert-danger" style="margin-bottom: 16px; font-size: 13px;">
+                                <span>✕</span>
+                                <span><?= htmlspecialchars($setupError, ENT_QUOTES, 'UTF-8') ?></span>
+                            </div>
+                        <?php endif; ?>
+
+                        <form method="POST" action="?action=setup">
+                            <input type="hidden" name="action" value="setup">
+                            <div class="form-group">
+                                <label for="setupUsername">Username Admin</label>
+                                <input type="text" id="setupUsername" name="username" class="form-control" required autofocus autocomplete="username" value="<?= htmlspecialchars($_POST['username'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="Masukkan username">
+                                <small style="color: #64748b; font-size: 11px; display: block; margin-top: 3px;">Minimal 3 karakter (huruf, angka, ., _, -).</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="setupPassword">Password Baru</label>
+                                <input type="password" id="setupPassword" name="password" class="form-control" required autocomplete="new-password" placeholder="Minimal 5 karakter" minlength="5">
+                            </div>
+                            <div class="form-group">
+                                <label for="setupConfirmPassword">Ulangi Password Baru</label>
+                                <input type="password" id="setupConfirmPassword" name="confirm_password" class="form-control" required autocomplete="new-password" placeholder="Ketik ulang password">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block" style="padding: 9px; font-weight: 600; margin-top: 6px;">
+                                ✓ Buat Akun &amp; Masuk ke File Manager
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        <?php
+        exit;
+    }
+
+    // TAMPILAN 2: HALAMAN LOGIN STANDAR (SETELAH AKUN DIBUAT)
     ?>
     <!DOCTYPE html>
     <html lang="id">
@@ -214,11 +301,11 @@ if (!Auth::check()) {
                         <input type="hidden" name="action" value="login">
                         <div class="form-group">
                             <label for="username">Username</label>
-                            <input type="text" id="username" name="username" class="form-control" required autofocus autocomplete="username" placeholder="admin">
+                            <input type="text" id="username" name="username" class="form-control" required autofocus autocomplete="username" placeholder="Masukkan username">
                         </div>
                         <div class="form-group">
                             <label for="password">Password</label>
-                            <input type="password" id="password" name="password" class="form-control" required autocomplete="current-password" placeholder="Password hosting">
+                            <input type="password" id="password" name="password" class="form-control" required autocomplete="current-password" placeholder="Masukkan password">
                         </div>
                         <button type="submit" class="btn btn-primary btn-block" style="padding: 9px;">Masuk ke File Manager</button>
                     </form>
@@ -1258,7 +1345,7 @@ if (!empty($action)) {
                     
                     <div class="form-group" style="margin-bottom: 14px;">
                         <label for="settingsUsername">Username Login:</label>
-                        <input type="text" id="settingsUsername" class="form-control" required autocomplete="username" placeholder="admin">
+                        <input type="text" id="settingsUsername" class="form-control" required autocomplete="username" placeholder="Masukkan username">
                         <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
                             Username untuk masuk ke File Manager (minimal 3 karakter).
                         </small>

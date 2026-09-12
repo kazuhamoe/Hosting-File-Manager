@@ -63,11 +63,18 @@ define('PROTECTED_FILES', [
 // 3. AUTHENTICATION & CREDENTIALS
 // --------------------------------------------------------------------------
 /**
- * Kredensial login single-user (Username & Hash Password Bcrypt).
- * Catatan: Dapat diubah langsung melalui menu Pengaturan (⚙️) di antarmuka web.
+ * Kredensial login administrator.
+ *
+ * FITUR CREATE PASSWORD OTOMATIS (First-Time Setup Wizard):
+ * Secara default AUTH_PASS_HASH dikosongkan ('') agar saat script pertama kali
+ * diunggah ke hosting, sistem secara otomatis mengaktifkan wizard pembuatan akun
+ * administrator ("Create Password"). Password yang dibuat pengguna akan disimpan
+ * dalam bentuk hash Bcrypt aman di storage/credentials.json.
+ *
+ * Jika Anda ingin mengunci password secara statis melalui file ini, isi hash Bcrypt di bawah.
  */
 define('AUTH_USER', 'admin');
-define('AUTH_PASS_HASH', '$2y$10$Soo6p/A.0wRiuxAxVjk7huyFt6rEGUWyrns8VHTgDdNYN0RDJ05Gi'); // Default: admin123
+define('AUTH_PASS_HASH', ''); // Kosong secara default: Mengaktifkan wizard pembuatan akun otomatis saat pertama kali dibuka di hosting
 
 // Session Timeout (dalam detik). Default: 2592000 detik = 30 hari (Stay Logged In)
 define('SESSION_TIMEOUT', 2592000);

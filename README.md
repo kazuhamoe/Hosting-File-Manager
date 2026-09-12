@@ -71,31 +71,33 @@ cd Hosting-File-Manager
 
 ## 🔑 Autentikasi & Keamanan (Authentication)
 
-Kredensial login awal diatur melalui `config.php`:
-- **Username Default:** `admin` (dapat disesuaikan pada `AUTH_USER`)
-- **Password Default:** Diatur via hash Bcrypt pada `AUTH_PASS_HASH` di `config.php`.
-
-> 💡 **Rekomendasi Keamanan:** Setelah berhasil masuk untuk pertama kali, segera buka menu **⚙️ Pengaturan (Settings)** di pojok kanan atas untuk mengubah username dan password Anda demi keamanan instalasi hosting Anda.
+File Manager ini menerapkan sistem **First-Time Setup Wizard ("Create Password")**:
+- **Setup Akun Pertama Kali:** Saat aplikasi baru diunggah ke server hosting dan dibuka di peramban, Anda akan langsung diarahkan ke form *Setup Administrator* untuk membuat username dan password pilihan Anda sendiri.
+- **Zero Default Password Leak:** Tidak ada password bawaan publik (`admin123` dsb.) yang terekspos di kode repositori maupun di form login.
+- **Form Login Bersih:** Halaman login tidak menampilkan placeholder atau petunjuk kredensial akun bawaan.
+- **Penyimpanan Terenkripsi:** Password di-hash menggunakan standar industri Bcrypt (`PASSWORD_BCRYPT`) dan disimpan aman di `storage/credentials.json`.
+- **Anti Re-Setup:** Rute inisialisasi akun otomatis dikunci secara permanen setelah akun pertama kali dibuat.
+- **Pengaturan Akun (Settings):** Username dan password dapat diubah sewaktu-waktu dengan aman melalui menu **⚙️ Pengaturan (Settings)** di pojok kanan atas setelah Anda login.
 
 ---
 
 ## ⚙️ Konfigurasi (`config.php`)
 
-Seluruh pengaturan dapat disesuaikan pada berkas `config.php`:
+Seluruh pengaturan sistem dapat disesuaikan pada berkas `config.php`:
 
 ```php
 // Batas direktori yang boleh diakses (Security Boundary)
-define('ALLOWED_ROOT', '/home/username/public_html');
+// Mengizinkan pengelolaan hingga root public_html / home hosting
+define('ALLOWED_ROOT', dirname(__DIR__)); 
 
-// Kredensial default
-define('AUTH_USER', 'admin');
-define('AUTH_PASS_HASH', '...'); // Bcrypt hash
-
-// Masa aktif sesi (detik) - default 30 hari
+// Masa aktif sesi (detik) - default 30 hari (Stay Logged In)
 define('SESSION_TIMEOUT', 2592000);
 
 // Batas maksimal upload file (dalam bytes, contoh 200 MB)
 define('MAX_UPLOAD_SIZE', 200 * 1024 * 1024);
+
+// Hash password fallback (dikosongkan secara default untuk mengaktifkan wizard pembuatan akun)
+define('AUTH_PASS_HASH', '');
 ```
 
 ---

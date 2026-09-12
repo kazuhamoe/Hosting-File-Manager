@@ -103,6 +103,93 @@ class Auth
     }
 
     /**
+     * Memeriksa apakah instalasi membutuhkan pembuatan akun administrator pertama kali (First-Time Setup).
+     */
+    public static function isSetupRequired(): bool
+    {
+        $file = defined('CREDENTIALS_FILE') ? CREDENTIALS_FILE : (__DIR__ . '/../storage/credentials.json');
+        if (file_exists($file)) {
+            $content = @file_get_contents($file);
+            if ($content) {
+                $data = json_decode($content, true);
+                if (is_array($data) && !empty($data['password_hash'])) {
+                    return false;
+                }
+            }
+        }
+
+        // Jika config.php telah diisi hash secara eksplisit, setup otomatis di-skip
+        if (defined('AUTH_PASS_HASH') && AUTH_PASS_HASH !== '') {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Membuat kredensial administrator awal saat pertama kali dipasang di hosting.
+     */
+    public static function setupInitialCredentials(string $username, string $password, string $confirmPassword = ''): array
+    {
+        if (!self::isSetupRequired()) {
+            return ['success' => false, 'message' => 'Akun administrator sudah dikonfigurasi. Silakan login.'];
+        }
+
+        $username = trim($username);
+        if (empty($username)) {
+            $username = 'admin';
+        } elseif (strlen($username) < 3 || strlen($username) > 50) {
+            return ['success' => false, 'message' => 'Username harus memiliki panjang 3-50 karakter.'];
+        } elseif (!preg_match('/^[a-zA-Z0-9_\-\.@]+$/', $username)) {
+            return ['success' => false, 'message' => 'Username hanya boleh mengandung huruf, angka, titik, underscore, strip, atau @.'];
+        }
+
+        $password = trim($password);
+        if (strlen($password) < 5) {
+            return ['success' => false, 'message' => 'Password baru minimal 5 karakter.'];
+        }
+
+        if ($confirmPassword !== '' && $password !== trim($confirmPassword)) {
+            return ['success' => false, 'message' => 'Konfirmasi password baru tidak cocok.'];
+        }
+
+        $finalHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 10]);
+
+        $file = defined('CREDENTIALS_FILE') ? CREDENTIALS_FILE : (__DIR__ . '/../storage/credentials.json');
+        $dir = dirname($file);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        $dataToSave = [
+            'username' => $username,
+            'password_hash' => $finalHash,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
+            'created_by_ip' => self::getClientIp()
+        ];
+
+        $saved = @file_put_contents($file, json_encode($dataToSave, JSON_PRETTY_PRINT), LOCK_EX);
+        if ($saved === false) {
+            return ['success' => false, 'message' => 'Gagal menyimpan kredensial. Pastikan folder storage/ memiliki izin tulis (chmod 0755/0777).'];
+        }
+
+        self::startSession();
+        $_SESSION['hfm_logged_in'] = true;
+        $_SESSION['hfm_username'] = $username;
+        $_SESSION['hfm_last_activity'] = time();
+        $_SESSION['hfm_csrf_token'] = bin2hex(random_bytes(32));
+
+        Logger::log('SETUP', $username, 'SUCCESS', 'Inisialisasi akun administrator berhasil (First Run)');
+
+        return [
+            'success' => true,
+            'message' => 'Akun administrator berhasil dibuat.',
+            'username' => $username
+        ];
+    }
+
+    /**
      * Memperbarui username dan/atau password admin secara dinamis dan aman.
      */
     public static function updateCredentials(string $currentPassword, string $newUsername, string $newPassword): array

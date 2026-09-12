@@ -66,18 +66,18 @@ Hosting
 ## 3. Scope Utama
 
 ### A. Authentication
-Sebelum File Manager dapat digunakan, user harus melewati login.
+Sebelum File Manager dapat digunakan, user harus melewati login atau proses inisialisasi akun administrator pertama kali.
 
 **Fitur:**
-- Username
-- Password
-- Session authentication
-- Logout
-- Session timeout
-- Proteksi terhadap akses langsung tanpa login
-
-*Tidak perlu sistem register.*
-*Tidak perlu multi-user pada versi awal.*
+- **First-Time Setup Wizard ("Create Password"):** Saat file manager baru diunggah ke hosting, sistem mendeteksi belum adanya kredensial dan langsung menampilkan formulir pembuatan username & password administrator baru.
+- **Zero Default Password Leak:** Tidak ada password bawaan / default (seperti `admin123`) yang tersimpan di repositori publik atau ditampilkan pada antarmuka login.
+- **Form Login Bersih:** Input username dan password tidak menampilkan petunjuk kredensial bawaan maupun autofill akun default.
+- **Penyimpanan Kredensial Terenkripsi:** Kredensial disimpan dengan hash Bcrypt (`PASSWORD_BCRYPT`) di file terproteksi `storage/credentials.json`.
+- **Anti-Hijacking Setup:** Setelah akun pertama kali dibuat, rute setup ditutup permanen dan tidak dapat diakses ulang untuk menimpa akun.
+- **Rate Limiting:** Proteksi brute-force login maksimal percobaan gagal sebelum jeda sementara.
+- **Session Authentication Persisten:** Dukungan sesi 30 hari (*Stay Logged In*).
+- **Logout:** Menghapus sesi server dan cookie browser secara bersih.
+- **Admin Settings UI:** Penggantian username & password kapan saja langsung dari dialog Pengaturan di antarmuka web.
 
 ---
 
@@ -772,4 +772,41 @@ Semua fitur berikut telah berhasil diimplementasikan, diuji, dan tersedia di ver
    - Pengaturan disimpan di `localStorage` peramban (`hfm_theme`) sehingga preferensi pengguna tetap terjaga saat me-refresh halaman atau membuka sesi berikutnya.
    - Deteksi otomatis preferensi sistem operasi pengguna (`prefers-color-scheme: dark`) saat pertama kali dibuka.
    - Transisi warna yang halus tanpa flicker (flash of unstyled content).
+
+---
+
+## 49. Spesifikasi: First-Time Setup Wizard & Dynamic Password Creation
+
+1. **Latar Belakang & Masalah:**
+   - Pada proyek open source yang diunggah ke GitHub dan dipasang oleh berbagai pengguna di server hosting publik, penggunaan kredensial default bawaan (seperti `admin / admin123`) memiliki risiko keamanan tinggi: pengguna sering lupa menggantinya, dan penyerang dapat memanfaatkan kredensial default untuk mengakses file hosting.
+   - Di samping itu, menampilkan placeholder atau petunjuk login default di antarmuka peramban membocorkan informasi kredensial kepada pihak ketiga.
+
+2. **Arsitektur First-Time Setup:**
+   - Pada instalasi baru (distribusi rilis open source), `AUTH_PASS_HASH` di `config.php` dikosongkan secara default (`define('AUTH_PASS_HASH', '');`) dan file `storage/credentials.json` belum ada.
+   - Metode `Auth::isSetupRequired()` mendeteksi kondisi instalasi baru ini.
+   - Jika belum ada akun administrator, sistem secara otomatis mengalihkan alur tampilan unauthenticated ke **Setup Administrator ("Create Password") Card**.
+
+3. **Alur Pembuatan Akun (Create Password Flow):**
+   - Pengguna diminta memasukkan:
+     - **Username Admin:** Minimal 3 karakter (karakter valid: huruf, angka, `.`, `_`, `-`, `@`). Nilai input awal kosong (tidak diisi default `admin`).
+     - **Password Baru:** Minimal 5 karakter.
+     - **Ulangi Password Baru:** Konfirmasi kecocokan password untuk mencegah kesalahan ketik.
+   - Validasi backend (`Auth::setupInitialCredentials()`):
+     - Memverifikasi panjang dan karakter username.
+     - Memverifikasi panjang password minimal 5 karakter.
+     - Memverifikasi kesamaan password dengan konfirmasi.
+     - Meng-enkripsi password menggunakan `password_hash($password, PASSWORD_BCRYPT)`.
+     - Menyimpan data terenkripsi ke `storage/credentials.json` dengan izin berkas ketat.
+     - Membuat sesi login aktif seketika (`session_start()`), mencatat ke audit log (`INITIAL_SETUP`), dan mengarahkan pengguna langsung ke antarmuka File Manager.
+
+4. **Keamanan & Pencegahan Re-Setup (Anti-Hijacking):**
+   - Setelah `storage/credentials.json` terbuat, `Auth::isSetupRequired()` bernilai `false`.
+   - Permintaan susulan ke rute `?action=setup` ditolak mentah-mentah (`success: false, message: "Akun administrator sudah dikonfigurasi"`). Penyerang tidak dapat menimpa akun admin yang sudah ada.
+
+5. **Antarmuka Login Standar Tanpa Bocoran Hint:**
+   - Setelah setup selesai, antarmuka login standar hanya menampilkan placeholder netral:
+     - Username: `placeholder="Masukkan username"` (bukan `admin`).
+     - Password: `placeholder="Masukkan password"` (bukan password default atau hint).
+   - Pengguna selanjutnya dapat mengelola dan memperbarui username maupun password kapan saja melalui dialog **Pengaturan (Settings)**.
+
 
