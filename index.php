@@ -940,15 +940,15 @@ if (!empty($action)) {
                 <table class="file-table" id="fileTable">
                     <thead>
                         <tr>
-                            <th style="width: 38px; text-align: center;" class="no-sort">
+                            <th style="width: 38px; text-align: center;" class="no-sort th-check">
                                 <input type="checkbox" id="selectAllCheckbox" title="Pilih Semua (Select All)">
                             </th>
-                            <th data-sort="name">Name</th>
-                            <th data-sort="type">Type</th>
-                            <th data-sort="size">Size</th>
-                            <th data-sort="modified">Modified</th>
-                            <th class="no-sort">Permissions</th>
-                            <th class="no-sort" style="text-align: right;">Action</th>
+                            <th data-sort="name" class="th-name">Name</th>
+                            <th data-sort="type" class="th-type">Type</th>
+                            <th data-sort="size" class="th-size">Size</th>
+                            <th data-sort="modified" class="th-mtime">Modified</th>
+                            <th class="no-sort th-perms">Permissions</th>
+                            <th class="no-sort th-actions" style="text-align: right;">Action</th>
                         </tr>
                     </thead>
                     <tbody id="fileTableBody">

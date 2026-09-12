@@ -263,15 +263,23 @@
         elements.btnEditorClose?.addEventListener('click', handleEditorClose);
         elements.btnCancelEditor?.addEventListener('click', handleEditorClose);
 
-        // Close dropdown and context menu on click outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.action-dropdown')) {
+        // Close dropdown and context menu on click or touch outside
+        const handleOutsideDismiss = (e) => {
+            if (!e.target.closest('.action-dropdown') && !e.target.closest('.dropdown-menu')) {
                 closeAllDropdowns();
             }
             if (!e.target.closest('#contextMenu')) {
                 hideContextMenu();
             }
-        });
+        };
+
+        document.addEventListener('click', handleOutsideDismiss);
+        document.addEventListener('touchstart', (e) => {
+            if (!e.target.closest('.action-dropdown') && !e.target.closest('.dropdown-menu') && !e.target.closest('#contextMenu')) {
+                closeAllDropdowns();
+                hideContextMenu();
+            }
+        }, { passive: true });
 
         // Desktop Keyboard Shortcuts
         document.addEventListener('keydown', (e) => {
@@ -557,6 +565,59 @@
         return `<svg class="item-icon icon-file" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
     }
 
+    // --------------------------------------------------------------------------
+    // Mobile Touch Long-Press Helper (For Context Menu on Mobile Devices)
+    // --------------------------------------------------------------------------
+    function attachTouchLongPress(element, callback) {
+        if (!element) return;
+        let touchTimer = null;
+        let startX = 0;
+        let startY = 0;
+        let triggered = false;
+
+        element.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            startX = touch.clientX;
+            startY = touch.clientY;
+            triggered = false;
+
+            touchTimer = setTimeout(() => {
+                triggered = true;
+                if (window.navigator && window.navigator.vibrate) {
+                    try { window.navigator.vibrate(35); } catch (err) {}
+                }
+                callback(touch.clientX, touch.clientY);
+            }, 500);
+        }, { passive: true });
+
+        element.addEventListener('touchmove', (e) => {
+            if (!touchTimer) return;
+            const touch = e.touches[0];
+            if (Math.hypot(touch.clientX - startX, touch.clientY - startY) > 12) {
+                clearTimeout(touchTimer);
+                touchTimer = null;
+            }
+        }, { passive: true });
+
+        element.addEventListener('touchend', (e) => {
+            if (touchTimer) {
+                clearTimeout(touchTimer);
+                touchTimer = null;
+            }
+            if (triggered) {
+                e.preventDefault();
+            }
+        });
+
+        element.addEventListener('touchcancel', () => {
+            if (touchTimer) {
+                clearTimeout(touchTimer);
+                touchTimer = null;
+            }
+        });
+    }
+
     function createEmptyStateHtml() {
         return `
             <div class="empty-state-card">
@@ -718,13 +779,27 @@
                 if (!state.selectedPaths.has(item.virtual_path)) {
                     state.selectedPaths.clear();
                     state.selectedPaths.add(item.virtual_path);
-                    document.querySelectorAll('.file-table tr.selected').forEach(r => r.classList.remove('selected'));
+                    document.querySelectorAll('.file-table tr.selected, .grid-card.selected').forEach(r => r.classList.remove('selected'));
                     document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
                     tr.classList.add('selected');
                     checkbox.checked = true;
                     updateSelectionUI();
                 }
                 showContextMenu(e.clientX, e.clientY, item);
+            });
+
+            // Mobile touch long-press (500ms) for context menu
+            attachTouchLongPress(tr, (clientX, clientY) => {
+                if (!state.selectedPaths.has(item.virtual_path)) {
+                    state.selectedPaths.clear();
+                    state.selectedPaths.add(item.virtual_path);
+                    document.querySelectorAll('.file-table tr.selected, .grid-card.selected').forEach(r => r.classList.remove('selected'));
+                    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+                    tr.classList.add('selected');
+                    checkbox.checked = true;
+                    updateSelectionUI();
+                }
+                showContextMenu(clientX, clientY, item);
             });
 
             // Action dropdown toggle
@@ -1010,6 +1085,20 @@
                     updateSelectionUI();
                 }
                 showContextMenu(e.clientX, e.clientY, item);
+            });
+
+            // Mobile touch long-press (500ms) for context menu
+            attachTouchLongPress(card, (clientX, clientY) => {
+                if (!state.selectedPaths.has(item.virtual_path)) {
+                    state.selectedPaths.clear();
+                    state.selectedPaths.add(item.virtual_path);
+                    document.querySelectorAll('.grid-card.selected, .file-table tr.selected').forEach(r => r.classList.remove('selected'));
+                    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+                    card.classList.add('selected');
+                    checkbox.checked = true;
+                    updateSelectionUI();
+                }
+                showContextMenu(clientX, clientY, item);
             });
 
             // Action dropdown toggle
