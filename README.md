@@ -73,7 +73,6 @@ cd Hosting-File-Manager
 
 File Manager ini menerapkan sistem **First-Time Setup Wizard ("Create Password")**:
 - **Setup Akun Pertama Kali:** Saat aplikasi baru diunggah ke server hosting dan dibuka di peramban, Anda akan langsung diarahkan ke form *Setup Administrator* untuk membuat username dan password pilihan Anda sendiri.
-- **Zero Default Password Leak:** Tidak ada password bawaan publik (`admin123` dsb.) yang terekspos di kode repositori maupun di form login.
 - **Form Login Bersih:** Halaman login tidak menampilkan placeholder atau petunjuk kredensial akun bawaan.
 - **Penyimpanan Terenkripsi:** Password di-hash menggunakan standar industri Bcrypt (`PASSWORD_BCRYPT`) dan disimpan aman di `storage/credentials.json`.
 - **Anti Re-Setup:** Rute inisialisasi akun otomatis dikunci secara permanen setelah akun pertama kali dibuat.
