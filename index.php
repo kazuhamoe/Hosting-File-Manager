@@ -209,115 +209,389 @@ if (!Auth::check()) {
     }
 
     if ($isSetupRequired) {
+        // ==================================================================
         // TAMPILAN 1: WIZARD FIRST-TIME SETUP (CREATE PASSWORD)
+        // ==================================================================
         ?>
         <!DOCTYPE html>
         <html lang="id">
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+            <meta name="theme-color" content="#070b14">
             <title>Setup Administrator — Hosting File Manager</title>
             <link rel="stylesheet" href="assets/css/style.css">
         </head>
         <body>
-            <div class="login-wrapper">
-                <div class="login-card" style="max-width: 420px;">
-                    <div class="login-header">
-                        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
-                        <div>
-                            <h1>Setup Administrator</h1>
-                            <p>Inisialisasi Pertama Hosting File Manager</p>
+            <div class="login-page-wrap">
+                <div class="login-ambient-glow"></div>
+
+                <div class="login-card-container">
+                    <!-- Brand Header -->
+                    <div class="login-brand-header">
+                        <div class="login-brand-icon-wrapper">
+                            <div class="login-brand-icon">
+                                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                    <circle cx="12" cy="13" r="2" fill="currentColor"/>
+                                    <path d="M12 15v3"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <h1 class="login-title">Hosting File Manager</h1>
+                        <p class="login-subtitle">Standalone Web &amp; cPanel File Explorer</p>
+                        
+                        <div class="login-mode-tag tag-setup">
+                            <span class="tag-indicator"></span>
+                            <span>🚀 Inisialisasi Akun Pertama (Setup)</span>
                         </div>
                     </div>
-                    <div class="login-body">
-                        <div class="setup-welcome-banner" style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; font-size: 12px; color: #0369a1; line-height: 1.5;">
-                            <strong>👋 Selamat Datang!</strong>
-                            <div style="margin-top: 2px;">File Manager baru saja dipasang di server hosting ini. Silakan buat username dan password administrator Anda untuk memulai.</div>
+
+                    <!-- Welcome / Info Box -->
+                    <div class="login-info-card setup">
+                        <div class="info-card-icon">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="16" x2="12" y2="12"/>
+                                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                            </svg>
+                        </div>
+                        <div class="info-card-text">
+                            <strong>👋 Selamat Datang di Server Baru Anda!</strong>
+                            <span>File Manager baru dipasang di hosting. Silakan buat username dan password untuk mengamankan akses berkas Anda.</span>
+                        </div>
+                    </div>
+
+                    <!-- Error Alert -->
+                    <?php if (!empty($setupError)): ?>
+                        <div class="login-error-alert" role="alert">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="8" x2="12" y2="12"/>
+                                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                            </svg>
+                            <span><?= htmlspecialchars($setupError, ENT_QUOTES, 'UTF-8') ?></span>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Form Setup -->
+                    <form method="POST" action="?action=setup" id="setupForm" novalidate>
+                        <input type="hidden" name="action" value="setup">
+
+                        <div class="form-group-field">
+                            <label for="setupUsername" class="field-label">
+                                <span>Username Admin</span>
+                                <span class="label-badge">Diperlukan</span>
+                            </label>
+                            <div class="input-control-wrap">
+                                <svg class="field-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                                <input type="text" id="setupUsername" name="username" class="login-input-control" required autofocus autocomplete="username" value="<?= htmlspecialchars($_POST['username'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="Contoh: admin">
+                            </div>
+                            <p class="field-helper">Gunakan 3-50 karakter (huruf, angka, titik, underscore, strip).</p>
                         </div>
 
-                        <?php if (!empty($setupError)): ?>
-                            <div class="alert alert-danger" style="margin-bottom: 16px; font-size: 13px;">
-                                <span>✕</span>
-                                <span><?= htmlspecialchars($setupError, ENT_QUOTES, 'UTF-8') ?></span>
+                        <div class="form-group-field">
+                            <label for="setupPassword" class="field-label">
+                                <span>Password Baru</span>
+                                <span class="label-badge">Min. 5 karakter</span>
+                            </label>
+                            <div class="input-control-wrap">
+                                <svg class="field-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                </svg>
+                                <input type="password" id="setupPassword" name="password" class="login-input-control with-action" required autocomplete="new-password" placeholder="Minimal 5 karakter" minlength="5">
+                                <button type="button" class="field-action-btn password-toggle-btn" data-target="setupPassword" title="Lihat password" aria-label="Tampilkan password">
+                                    <svg class="eye-open" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <svg class="eye-closed" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                </button>
                             </div>
-                        <?php endif; ?>
+                        </div>
 
-                        <form method="POST" action="?action=setup">
-                            <input type="hidden" name="action" value="setup">
-                            <div class="form-group">
-                                <label for="setupUsername">Username Admin</label>
-                                <input type="text" id="setupUsername" name="username" class="form-control" required autofocus autocomplete="username" value="<?= htmlspecialchars($_POST['username'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="Masukkan username">
-                                <small style="color: #64748b; font-size: 11px; display: block; margin-top: 3px;">Minimal 3 karakter (huruf, angka, ., _, -).</small>
+                        <div class="form-group-field">
+                            <label for="setupConfirmPassword" class="field-label">
+                                <span>Ulangi Password Baru</span>
+                                <span id="matchBadge" class="match-badge" style="display:none;"></span>
+                            </label>
+                            <div class="input-control-wrap">
+                                <svg class="field-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                </svg>
+                                <input type="password" id="setupConfirmPassword" name="confirm_password" class="login-input-control with-action" required autocomplete="new-password" placeholder="Ketik ulang password">
+                                <button type="button" class="field-action-btn password-toggle-btn" data-target="setupConfirmPassword" title="Lihat password" aria-label="Tampilkan password">
+                                    <svg class="eye-open" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <svg class="eye-closed" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                </button>
                             </div>
-                            <div class="form-group">
-                                <label for="setupPassword">Password Baru</label>
-                                <input type="password" id="setupPassword" name="password" class="form-control" required autocomplete="new-password" placeholder="Minimal 5 karakter" minlength="5">
-                            </div>
-                            <div class="form-group">
-                                <label for="setupConfirmPassword">Ulangi Password Baru</label>
-                                <input type="password" id="setupConfirmPassword" name="confirm_password" class="form-control" required autocomplete="new-password" placeholder="Ketik ulang password">
-                            </div>
-                            <button type="submit" class="btn btn-primary btn-block" style="padding: 9px; font-weight: 600; margin-top: 6px;">
-                                ✓ Buat Akun &amp; Masuk ke File Manager
-                            </button>
-                        </form>
+                        </div>
+
+                        <button type="submit" class="login-primary-btn">
+                            <span>Buat Akun &amp; Buka File Manager</span>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </button>
+                    </form>
+
+                    <!-- Card Bottom Meta -->
+                    <div class="login-card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            <span>Zero DB</span>
+                        </div>
+                        <span class="meta-separator">&bull;</span>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                            <span>PHP <?= PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION ?></span>
+                        </div>
+                        <span class="meta-separator">&bull;</span>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            <span>v2.0.0 Pro</span>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Page Footer -->
+                <footer class="login-page-footer">
+                    <p class="footer-copy">
+                        &copy; <?= date('Y') ?> Hosting File Manager &bull; Developer oleh <a href="https://github.com/kazuhamoe" target="_blank" rel="noopener" class="footer-author-link">kazuhamoe</a>
+                    </p>
+                    <div class="footer-extra-links">
+                        <a href="https://github.com/kazuhamoe/Hosting-File-Manager" target="_blank" rel="noopener">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                            <span>GitHub Repository</span>
+                        </a>
+                    </div>
+                </footer>
             </div>
+
+            <script>
+                // Toggle Password Visibility
+                document.querySelectorAll('.password-toggle-btn').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        var targetId = btn.getAttribute('data-target');
+                        var input = document.getElementById(targetId);
+                        if (!input) return;
+                        var isPassword = input.type === 'password';
+                        input.type = isPassword ? 'text' : 'password';
+                        btn.classList.toggle('is-visible', isPassword);
+                        btn.setAttribute('aria-label', isPassword ? 'Sembunyikan password' : 'Tampilkan password');
+                        input.focus();
+                    });
+                });
+
+                // Match Indicator for Setup
+                var pwdInput = document.getElementById('setupPassword');
+                var confirmInput = document.getElementById('setupConfirmPassword');
+                var matchBadge = document.getElementById('matchBadge');
+                if (pwdInput && confirmInput && matchBadge) {
+                    function checkMatch() {
+                        var p1 = pwdInput.value;
+                        var p2 = confirmInput.value;
+                        if (!p2) {
+                            matchBadge.style.display = 'none';
+                            return;
+                        }
+                        matchBadge.style.display = 'inline-flex';
+                        if (p1 === p2) {
+                            matchBadge.className = 'match-badge match-success';
+                            matchBadge.textContent = 'Cocok ✓';
+                        } else {
+                            matchBadge.className = 'match-badge match-error';
+                            matchBadge.textContent = 'Belum cocok ✕';
+                        }
+                    }
+                    pwdInput.addEventListener('input', checkMatch);
+                    confirmInput.addEventListener('input', checkMatch);
+                }
+            </script>
         </body>
         </html>
         <?php
         exit;
     }
 
+    // ==================================================================
     // TAMPILAN 2: HALAMAN LOGIN STANDAR (SETELAH AKUN DIBUAT)
+    // ==================================================================
     ?>
     <!DOCTYPE html>
     <html lang="id">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Login — Hosting File Manager</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+        <meta name="theme-color" content="#070b14">
+        <title>Login Administrator — Hosting File Manager</title>
         <link rel="stylesheet" href="assets/css/style.css">
     </head>
     <body>
-        <div class="login-wrapper">
-            <div class="login-card">
-                <div class="login-header">
-                    <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/></svg>
-                    <div>
-                        <h1>Hosting File Manager</h1>
-                        <p>Autentikasi Server Hosting</p>
+        <div class="login-page-wrap">
+            <div class="login-ambient-glow"></div>
+
+            <div class="login-card-container">
+                <!-- Brand Header -->
+                <div class="login-brand-header">
+                    <div class="login-brand-icon-wrapper">
+                        <div class="login-brand-icon">
+                            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="2" fill="currentColor"/>
+                                <path d="M12 15v3"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <h1 class="login-title">Hosting File Manager</h1>
+                    <p class="login-subtitle">Standalone Web &amp; cPanel File Explorer</p>
+                    
+                    <div class="login-mode-tag tag-login">
+                        <span class="tag-indicator"></span>
+                        <span>🔐 Masuk ke Akun Administrator</span>
                     </div>
                 </div>
-                <div class="login-body">
-                    <?php if (!empty($loginError)): ?>
-                        <div class="alert alert-danger" style="margin-bottom: 16px; font-size: 13px;">
-                            <span>✕</span>
-                            <span><?= htmlspecialchars($loginError, ENT_QUOTES, 'UTF-8') ?></span>
-                        </div>
-                    <?php endif; ?>
 
-                    <form method="POST" action="?action=login">
-                        <input type="hidden" name="action" value="login">
-                        <div class="form-group">
-                            <label for="username">Username</label>
-                            <input type="text" id="username" name="username" class="form-control" required autofocus autocomplete="username" placeholder="Masukkan username">
+                <!-- Security Info Card -->
+                <div class="login-info-card login">
+                    <div class="info-card-icon">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                    </div>
+                    <div class="info-card-text">
+                        <strong>Autentikasi Aman</strong>
+                        <span>Kredensial terenkripsi Bcrypt &bull; Dilindungi proteksi Brute-Force &amp; Token CSRF.</span>
+                    </div>
+                </div>
+
+                <!-- Error Alert -->
+                <?php if (!empty($loginError)): ?>
+                    <div class="login-error-alert" role="alert">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        <span><?= htmlspecialchars($loginError, ENT_QUOTES, 'UTF-8') ?></span>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Form Login -->
+                <form method="POST" action="?action=login" id="loginForm" novalidate>
+                    <input type="hidden" name="action" value="login">
+
+                    <div class="form-group-field">
+                        <label for="usernameField" class="field-label">
+                            <span>Username</span>
+                            <span class="label-badge">Diperlukan</span>
+                        </label>
+                        <div class="input-control-wrap">
+                            <svg class="field-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            <input type="text" id="usernameField" name="username" class="login-input-control" required autofocus autocomplete="username" value="<?= htmlspecialchars($_POST['username'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="Masukkan username">
                         </div>
-                        <div class="form-group">
-                            <label for="password">Password</label>
-                            <input type="password" id="password" name="password" class="form-control" required autocomplete="current-password" placeholder="Masukkan password">
+                    </div>
+
+                    <div class="form-group-field">
+                        <label for="passwordField" class="field-label">
+                            <span>Password</span>
+                            <span class="label-badge">Diperlukan</span>
+                        </label>
+                        <div class="input-control-wrap">
+                            <svg class="field-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                            <input type="password" id="passwordField" name="password" class="login-input-control with-action" required autocomplete="current-password" placeholder="Masukkan password">
+                            <button type="button" class="field-action-btn password-toggle-btn" data-target="passwordField" title="Lihat password" aria-label="Tampilkan password">
+                                <svg class="eye-open" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                <svg class="eye-closed" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            </button>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-block" style="padding: 9px;">Masuk ke File Manager</button>
-                    </form>
+                        <div id="capsLockWarning" class="caps-warning" style="display:none;">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                            <span>Caps Lock aktif</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="login-primary-btn">
+                        <span>Masuk ke File Manager</span>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </button>
+                </form>
+
+                <!-- Card Bottom Meta -->
+                <div class="login-card-meta">
+                    <div class="meta-item">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        <span>Zero DB</span>
+                    </div>
+                    <span class="meta-separator">&bull;</span>
+                    <div class="meta-item">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        <span>PHP <?= PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION ?></span>
+                    </div>
+                    <span class="meta-separator">&bull;</span>
+                    <div class="meta-item">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        <span>v2.0.0 Pro</span>
+                    </div>
                 </div>
             </div>
+
+            <!-- Page Footer -->
+            <footer class="login-page-footer">
+                <p class="footer-copy">
+                    &copy; <?= date('Y') ?> Hosting File Manager &bull; Developer oleh <a href="https://github.com/kazuhamoe" target="_blank" rel="noopener" class="footer-author-link">kazuhamoe</a>
+                </p>
+                <div class="footer-extra-links">
+                    <a href="https://github.com/kazuhamoe/Hosting-File-Manager" target="_blank" rel="noopener">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                        <span>GitHub Repository</span>
+                    </a>
+                </div>
+            </footer>
         </div>
+
+        <script>
+            // Toggle Password Visibility
+            document.querySelectorAll('.password-toggle-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var targetId = btn.getAttribute('data-target');
+                    var input = document.getElementById(targetId);
+                    if (!input) return;
+                    var isPassword = input.type === 'password';
+                    input.type = isPassword ? 'text' : 'password';
+                    btn.classList.toggle('is-visible', isPassword);
+                    btn.setAttribute('aria-label', isPassword ? 'Sembunyikan password' : 'Tampilkan password');
+                    input.focus();
+                });
+            });
+
+            // Caps Lock Warning
+            var pwdInput = document.getElementById('passwordField');
+            var capsWarning = document.getElementById('capsLockWarning');
+            if (pwdInput && capsWarning) {
+                pwdInput.addEventListener('keyup', function (e) {
+                    if (e.getModifierState && e.getModifierState('CapsLock')) {
+                        capsWarning.style.display = 'flex';
+                    } else {
+                        capsWarning.style.display = 'none';
+                    }
+                });
+                pwdInput.addEventListener('blur', function () {
+                    capsWarning.style.display = 'none';
+                });
+            }
+        </script>
     </body>
     </html>
     <?php
     exit;
 }
+
 
 // --------------------------------------------------------------------------
 // ROUTING API ACTIONS (SETELAH TERAUTENTIKASI)
@@ -1020,6 +1294,10 @@ if (!empty($action)) {
                 </div>
                 <div class="status-extra">
                     <span id="statusCurrentPathHint">/</span>
+                    <span class="status-separator status-sep-copyright">|</span>
+                    <span class="status-copyright">
+                        &copy; <?= date('Y') ?> Hosting File Manager &bull; Developer oleh <a href="https://github.com/kazuhamoe" target="_blank" rel="noopener" class="copyright-link">kazuhamoe</a>
+                    </span>
                 </div>
             </div>
         </main>
