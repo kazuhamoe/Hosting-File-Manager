@@ -15,8 +15,9 @@ cookies.txt
 sandbox/
 test_*/
 
-# Distribution packages (release archives belong in GitHub Releases)
+# Distribution packages (release package is tracked, user zips ignored)
 *.zip
+!hosting-file-manager.zip
 *.tar.gz
 *.rar
 
