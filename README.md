@@ -9,6 +9,10 @@
 
 Dilengkapi dengan antarmuka modern layaknya cPanel File Manager / Desktop Explorer, kompresi & ekstraksi ZIP yang tangguh (bebas false-positive), in-browser Code Editor, sesi login persisten 30 hari, serta antarmuka pengaturan akun (*Admin Settings*).
 
+<p align="center">
+  <img src="screenshots/dashboard-dark.png" alt="Hosting File Manager Dark Mode Dashboard" width="100%">
+</p>
+
 ---
 
 ## ✨ Fitur Utama (Key Features)
@@ -70,6 +74,10 @@ cd Hosting-File-Manager
 ---
 
 ## 🔑 Autentikasi & Keamanan (Authentication)
+
+<p align="center">
+  <img src="screenshots/setup-wizard.png" alt="Setup Administrator Wizard" width="540">
+</p>
 
 File Manager ini menerapkan sistem **First-Time Setup Wizard ("Create Password")**:
 - **Setup Akun Pertama Kali:** Saat aplikasi baru diunggah ke server hosting dan dibuka di peramban, Anda akan langsung diarahkan ke form *Setup Administrator* untuk membuat username dan password pilihan Anda sendiri.
