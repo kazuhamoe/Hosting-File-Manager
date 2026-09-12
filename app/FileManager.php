@@ -1530,4 +1530,318 @@ class FileManager
             'limit_reached'  => (count($matches) >= $maxResults)
         ];
     }
+
+    // ==========================================================================
+    // RECYCLE BIN / TRASH METHODS
+    // ==========================================================================
+
+    /**
+     * Mendapatkan path absolut folder trash.
+     */
+    private static function getTrashDir(): string
+    {
+        $trashDir = defined('STORAGE_PATH') ? STORAGE_PATH . DIRECTORY_SEPARATOR . 'trash' : (__DIR__ . '/../storage/trash');
+        if (!is_dir($trashDir)) {
+            @mkdir($trashDir, 0755, true);
+        }
+        return $trashDir;
+    }
+
+    /**
+     * Memindahkan file/folder ke Trash (soft delete).
+     */
+    public static function trashItem(string $relativePath): array
+    {
+        if (Security::isProtected($relativePath)) {
+            return ['success' => false, 'message' => 'Item ini dilindungi dan tidak dapat dihapus.'];
+        }
+
+        $realPath = Security::resolvePath($relativePath, true);
+        if ($realPath === null) {
+            return ['success' => false, 'message' => 'Item tidak ditemukan atau akses ditolak.'];
+        }
+
+        if (strcasecmp($realPath, Security::getRoot()) === 0) {
+            return ['success' => false, 'message' => 'Tidak dapat menghapus root directory.'];
+        }
+
+        $virtualPath = Security::toVirtualPath($realPath);
+        $name = basename($realPath);
+        $trashDir = self::getTrashDir();
+
+        // Buat ID unik untuk item di trash
+        $trashId = uniqid('', true);
+        $trashTarget = $trashDir . DIRECTORY_SEPARATOR . $trashId . '_' . $name;
+        $metaFile = $trashTarget . '.meta';
+
+        // Pindahkan ke trash
+        if (!@rename($realPath, $trashTarget)) {
+            // Jika rename antar drive/filesystem gagal, coba copy + delete
+            if (is_dir($realPath)) {
+                if (!self::copyDirectoryRecursive($realPath, $trashTarget)) {
+                    return ['success' => false, 'message' => 'Gagal memindahkan folder ke Trash.'];
+                }
+                self::deleteDirectoryRecursive($realPath);
+            } else {
+                if (!@copy($realPath, $trashTarget)) {
+                    return ['success' => false, 'message' => 'Gagal memindahkan file ke Trash.'];
+                }
+                @unlink($realPath);
+            }
+        }
+
+        // Simpan metadata
+        $meta = [
+            'id'            => $trashId,
+            'name'          => $name,
+            'original_path' => $virtualPath,
+            'is_dir'        => is_dir($trashTarget),
+            'size'          => is_file($trashTarget) ? filesize($trashTarget) : 0,
+            'deleted_at'    => date('Y-m-d H:i:s'),
+            'deleted_ts'    => time(),
+        ];
+        @file_put_contents($metaFile, json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+        Logger::log('TRASH', $virtualPath, 'SUCCESS', 'Dipindahkan ke Trash: ' . $trashId);
+        return [
+            'success' => true,
+            'message' => "'{$name}' dipindahkan ke Trash.",
+            'trash_id' => $trashId
+        ];
+    }
+
+    /**
+     * Memindahkan banyak item ke Trash sekaligus.
+     */
+    public static function bulkTrash(array $paths): array
+    {
+        if (empty($paths)) {
+            return ['success' => false, 'message' => 'Tidak ada item yang dipilih.'];
+        }
+
+        $trashed = 0;
+        $failed = [];
+
+        foreach ($paths as $path) {
+            $res = self::trashItem($path);
+            if ($res['success']) {
+                $trashed++;
+            } else {
+                $failed[] = basename($path) . ' (' . ($res['message'] ?? 'Gagal') . ')';
+            }
+        }
+
+        $msg = "$trashed item dipindahkan ke Trash.";
+        if (!empty($failed)) {
+            $msg .= ' Beberapa gagal: ' . implode(', ', $failed);
+        }
+
+        return [
+            'success'       => ($trashed > 0),
+            'message'       => $msg,
+            'trashed_count' => $trashed,
+            'failed_count'  => count($failed),
+            'failed'        => $failed
+        ];
+    }
+
+    /**
+     * Menampilkan daftar item di Trash.
+     */
+    public static function listTrash(): array
+    {
+        $trashDir = self::getTrashDir();
+        $items = [];
+
+        $files = @scandir($trashDir);
+        if ($files === false) {
+            return ['success' => true, 'items' => [], 'count' => 0];
+        }
+
+        foreach ($files as $file) {
+            if ($file === '.' || $file === '..' || str_ends_with($file, '.meta')) {
+                continue;
+            }
+
+            $metaFile = $trashDir . DIRECTORY_SEPARATOR . $file . '.meta';
+            if (!file_exists($metaFile)) {
+                continue; // Abaikan item tanpa metadata
+            }
+
+            $meta = json_decode(file_get_contents($metaFile), true);
+            if (!is_array($meta)) continue;
+
+            $realTrashPath = $trashDir . DIRECTORY_SEPARATOR . $file;
+            $size = is_file($realTrashPath) ? filesize($realTrashPath) : 0;
+
+            $items[] = [
+                'trash_id'      => $meta['id'] ?? '',
+                'trash_file'    => $file,
+                'name'          => $meta['name'] ?? $file,
+                'original_path' => $meta['original_path'] ?? '/',
+                'is_dir'        => $meta['is_dir'] ?? is_dir($realTrashPath),
+                'size'          => $size,
+                'size_human'    => Security::formatBytes($size),
+                'deleted_at'    => $meta['deleted_at'] ?? '',
+                'deleted_ts'    => $meta['deleted_ts'] ?? 0,
+            ];
+        }
+
+        // Urutkan terbaru di atas
+        usort($items, fn($a, $b) => $b['deleted_ts'] <=> $a['deleted_ts']);
+
+        return [
+            'success' => true,
+            'items'   => $items,
+            'count'   => count($items)
+        ];
+    }
+
+    /**
+     * Mengembalikan item dari Trash ke path asalnya.
+     */
+    public static function restoreFromTrash(string $trashId): array
+    {
+        $trashDir = self::getTrashDir();
+
+        // Cari file di trash berdasarkan ID
+        $trashFile = null;
+        $metaFile = null;
+        $files = @scandir($trashDir);
+        if ($files === false) {
+            return ['success' => false, 'message' => 'Gagal membaca Trash.'];
+        }
+
+        foreach ($files as $file) {
+            if (str_starts_with($file, $trashId . '_')) {
+                $trashFile = $trashDir . DIRECTORY_SEPARATOR . $file;
+                $metaFile  = $trashFile . '.meta';
+                break;
+            }
+        }
+
+        if ($trashFile === null || !file_exists($trashFile)) {
+            return ['success' => false, 'message' => 'Item tidak ditemukan di Trash.'];
+        }
+
+        $meta = [];
+        if ($metaFile && file_exists($metaFile)) {
+            $meta = json_decode(file_get_contents($metaFile), true) ?: [];
+        }
+
+        $originalVirtualPath = $meta['original_path'] ?? ('/' . basename($trashFile));
+        $name = $meta['name'] ?? basename($trashFile);
+
+        // Hitung path restore di filesystem
+        $root = Security::getRoot();
+        $restorePath = $root . DIRECTORY_SEPARATOR . ltrim(str_replace('/', DIRECTORY_SEPARATOR, $originalVirtualPath), DIRECTORY_SEPARATOR);
+        $restoreDir = dirname($restorePath);
+
+        // Buat folder induk jika belum ada
+        if (!is_dir($restoreDir)) {
+            @mkdir($restoreDir, 0755, true);
+        }
+
+        // Hindari overwrite — tambahkan suffix jika sudah ada
+        $finalRestorePath = $restorePath;
+        if (file_exists($finalRestorePath) || is_dir($finalRestorePath)) {
+            $ext = pathinfo($name, PATHINFO_EXTENSION);
+            $base = $ext ? substr($name, 0, -strlen($ext) - 1) : $name;
+            $suffix = 1;
+            do {
+                $newName = $ext ? "{$base}_restored{$suffix}.{$ext}" : "{$base}_restored{$suffix}";
+                $finalRestorePath = $restoreDir . DIRECTORY_SEPARATOR . $newName;
+                $suffix++;
+            } while (file_exists($finalRestorePath) || is_dir($finalRestorePath));
+        }
+
+        if (!@rename($trashFile, $finalRestorePath)) {
+            return ['success' => false, 'message' => 'Gagal memindahkan item kembali ke lokasi asalnya.'];
+        }
+
+        // Hapus metadata
+        if ($metaFile && file_exists($metaFile)) {
+            @unlink($metaFile);
+        }
+
+        @chmod($finalRestorePath, 0777);
+
+        $restoredVirtual = Security::toVirtualPath($finalRestorePath);
+        Logger::log('RESTORE', $originalVirtualPath . ' -> ' . $restoredVirtual, 'SUCCESS');
+
+        return [
+            'success'          => true,
+            'message'          => "'{$name}' berhasil dikembalikan.",
+            'restored_path'    => $restoredVirtual
+        ];
+    }
+
+    /**
+     * Menghapus permanen satu item dari Trash.
+     */
+    public static function deletePermanent(string $trashId): array
+    {
+        $trashDir = self::getTrashDir();
+
+        $trashFile = null;
+        $metaFile  = null;
+        $files = @scandir($trashDir);
+        if ($files === false) {
+            return ['success' => false, 'message' => 'Gagal membaca Trash.'];
+        }
+
+        foreach ($files as $file) {
+            if (str_starts_with($file, $trashId . '_')) {
+                $trashFile = $trashDir . DIRECTORY_SEPARATOR . $file;
+                $metaFile  = $trashFile . '.meta';
+                break;
+            }
+        }
+
+        if ($trashFile === null || !file_exists($trashFile)) {
+            return ['success' => false, 'message' => 'Item tidak ditemukan di Trash.'];
+        }
+
+        $name = basename($trashFile);
+
+        if (is_dir($trashFile)) {
+            self::deleteDirectoryRecursive($trashFile);
+        } else {
+            @unlink($trashFile);
+        }
+
+        if ($metaFile && file_exists($metaFile)) {
+            @unlink($metaFile);
+        }
+
+        Logger::log('DELETE_PERMANENT', $name, 'SUCCESS', 'Dihapus permanen dari Trash');
+        return ['success' => true, 'message' => 'Item dihapus permanen dari Trash.'];
+    }
+
+    /**
+     * Mengosongkan seluruh isi Trash (hapus permanen semua).
+     */
+    public static function emptyTrash(): array
+    {
+        $trashDir = self::getTrashDir();
+        $files = @scandir($trashDir);
+        if ($files === false) {
+            return ['success' => false, 'message' => 'Gagal membaca Trash.'];
+        }
+
+        $deleted = 0;
+        foreach ($files as $file) {
+            if ($file === '.' || $file === '..' || $file === '.gitkeep') continue;
+            $filePath = $trashDir . DIRECTORY_SEPARATOR . $file;
+            if (is_dir($filePath)) {
+                self::deleteDirectoryRecursive($filePath);
+            } else {
+                @unlink($filePath);
+            }
+            $deleted++;
+        }
+
+        Logger::log('EMPTY_TRASH', 'storage/trash', 'SUCCESS', "$deleted item dihapus permanen");
+        return ['success' => true, 'message' => 'Trash berhasil dikosongkan.', 'deleted_count' => $deleted];
+    }
 }

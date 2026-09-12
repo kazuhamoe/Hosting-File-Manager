@@ -126,7 +126,27 @@
         btnEditorFullscreen: document.getElementById('btnEditorFullscreen'),
         // CHMOD Elements
         chmodOctalInput: document.getElementById('chmodOctalInput'),
-        chmodRwxDisplay: document.getElementById('chmodRwxDisplay')
+        chmodRwxDisplay: document.getElementById('chmodRwxDisplay'),
+        // Trash Elements
+        modalTrash: document.getElementById('modalTrash'),
+        trashTableBody: document.getElementById('trashTableBody'),
+        trashEmptyState: document.getElementById('trashEmptyState'),
+        trashTable: document.getElementById('trashTable'),
+        trashBadge: document.getElementById('trashBadge'),
+        btnTrash: document.getElementById('btnTrash'),
+        btnEmptyTrash: document.getElementById('btnEmptyTrash'),
+        // Activity Log Elements
+        modalActivityLog: document.getElementById('modalActivityLog'),
+        logTableBody: document.getElementById('logTableBody'),
+        logTable: document.getElementById('logTable'),
+        logEmptyState: document.getElementById('logEmptyState'),
+        logFilterText: document.getElementById('logFilterText'),
+        logFilterAction: document.getElementById('logFilterAction'),
+        logCountBadge: document.getElementById('logCountBadge'),
+        logFileSizeInfo: document.getElementById('logFileSizeInfo'),
+        btnActivityLog: document.getElementById('btnActivityLog'),
+        btnRefreshLog: document.getElementById('btnRefreshLog'),
+        btnClearLog: document.getElementById('btnClearLog')
     };
 
     // --------------------------------------------------------------------------
@@ -401,6 +421,19 @@
                 loadDirectory(state.currentPath, false);
             });
         });
+
+        // Trash Button
+        elements.btnTrash?.addEventListener('click', openTrashModal);
+        elements.btnEmptyTrash?.addEventListener('click', handleEmptyTrash);
+
+        // Activity Log Button
+        elements.btnActivityLog?.addEventListener('click', openActivityLogModal);
+        elements.btnRefreshLog?.addEventListener('click', loadActivityLog);
+        elements.btnClearLog?.addEventListener('click', handleClearLog);
+
+        // Activity Log live filter
+        elements.logFilterText?.addEventListener('input', () => loadActivityLog());
+        elements.logFilterAction?.addEventListener('change', () => loadActivityLog());
     }
 
     // --------------------------------------------------------------------------
@@ -2274,9 +2307,185 @@
         }
     }
 
-    // --------------------------------------------------------------------------
-    // Single Item Operations (New File, New Folder, Rename, Delete, Copy, Move, Extract)
-    // --------------------------------------------------------------------------
+    // ==========================================================================
+    // RECYCLE BIN / TRASH FUNCTIONS
+    // ==========================================================================
+
+    async function openTrashModal() {
+        openModal(elements.modalTrash);
+        await loadTrashList();
+    }
+
+    async function loadTrashList() {
+        const data = await requestApi(`?action=list_trash&csrf_token=${encodeURIComponent(state.csrfToken)}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!data.success) {
+            showToast(data.message || 'Gagal memuat Trash.', 'error');
+            return;
+        }
+        renderTrashTable(data.items || []);
+        updateTrashBadge(data.count || 0);
+    }
+
+    function updateTrashBadge(count) {
+        const badge = elements.trashBadge;
+        if (!badge) return;
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = '';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    function renderTrashTable(items) {
+        const tbody = elements.trashTableBody;
+        const emptyState = elements.trashEmptyState;
+        const table = elements.trashTable;
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        if (items.length === 0) {
+            if (table) table.style.display = 'none';
+            if (emptyState) emptyState.style.display = '';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+        if (table) table.style.display = '';
+
+        items.forEach(item => {
+            const isDir = item.is_dir;
+            const iconSvg = isDir
+                ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>`
+                : `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight:500;display:flex;align-items:center;gap:6px;">${iconSvg}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span></td>
+                <td style="color:var(--text-muted);font-size:11px;">${isDir ? 'Folder' : 'File'}</td>
+                <td style="font-size:11px;color:var(--text-muted);">${escapeHtml(item.deleted_at)}</td>
+                <td style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;" title="${escapeHtml(item.original_path)}">${escapeHtml(item.original_path)}</td>
+                <td style="text-align:right;white-space:nowrap;">
+                    <button class="btn-restore" title="Restore ke path asal">↩ Restore</button>
+                    <button class="btn-perm-delete" title="Hapus Permanen" style="margin-left:4px;">✕ Hapus</button>
+                </td>
+            `;
+
+            tr.querySelector('.btn-restore').addEventListener('click', () => restoreFromTrash(item.trash_id, item.name));
+            tr.querySelector('.btn-perm-delete').addEventListener('click', () => deletePermanent(item.trash_id, item.name));
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function restoreFromTrash(trashId, name) {
+        if (!confirm(`Kembalikan "${name}" ke lokasi asal?`)) return;
+        const formData = new FormData();
+        formData.append('csrf_token', state.csrfToken);
+        formData.append('action', 'restore_trash');
+        formData.append('trash_id', trashId);
+        const data = await requestApi('?action=restore_trash', { method: 'POST', body: formData });
+        showToast(data.message || (data.success ? 'Berhasil direstore.' : 'Gagal.'), data.success ? 'success' : 'error');
+        if (data.success) {
+            await loadTrashList();
+            await loadDirectory(state.currentPath, false);
+        }
+    }
+
+    async function deletePermanent(trashId, name) {
+        if (!confirm(`Hapus permanen "${name}"?\nTindakan ini tidak dapat dibatalkan!`)) return;
+        const formData = new FormData();
+        formData.append('csrf_token', state.csrfToken);
+        formData.append('action', 'delete_permanent');
+        formData.append('trash_id', trashId);
+        const data = await requestApi('?action=delete_permanent', { method: 'POST', body: formData });
+        showToast(data.message || (data.success ? 'Dihapus permanen.' : 'Gagal.'), data.success ? 'success' : 'error');
+        if (data.success) await loadTrashList();
+    }
+
+    async function handleEmptyTrash() {
+        if (!confirm('Hapus SEMUA item di Trash secara permanen?\nTindakan ini tidak dapat dibatalkan!')) return;
+        const formData = new FormData();
+        formData.append('csrf_token', state.csrfToken);
+        formData.append('action', 'empty_trash');
+        const data = await requestApi('?action=empty_trash', { method: 'POST', body: formData });
+        showToast(data.message || (data.success ? 'Trash dikosongkan.' : 'Gagal.'), data.success ? 'success' : 'error');
+        if (data.success) await loadTrashList();
+    }
+
+    // ==========================================================================
+    // ACTIVITY LOG FUNCTIONS
+    // ==========================================================================
+
+    async function openActivityLogModal() {
+        openModal(elements.modalActivityLog);
+        await loadActivityLog();
+    }
+
+    async function loadActivityLog() {
+        const filter = elements.logFilterText?.value.trim() || '';
+        const actionFilter = elements.logFilterAction?.value || '';
+        const url = `?action=get_logs&limit=200&filter=${encodeURIComponent(filter)}&action_filter=${encodeURIComponent(actionFilter)}&csrf_token=${encodeURIComponent(state.csrfToken)}`;
+        const data = await requestApi(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!data.success) {
+            showToast(data.message || 'Gagal memuat log.', 'error');
+            return;
+        }
+        renderLogTable(data.logs || []);
+        if (elements.logCountBadge) {
+            elements.logCountBadge.textContent = `${data.total} entri`;
+        }
+        if (elements.logFileSizeInfo && data.log_size_human) {
+            elements.logFileSizeInfo.textContent = `Ukuran file log: ${data.log_size_human}`;
+        }
+    }
+
+    function renderLogTable(logs) {
+        const tbody = elements.logTableBody;
+        const emptyState = elements.logEmptyState;
+        const table = elements.logTable;
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        if (logs.length === 0) {
+            if (table) table.style.display = 'none';
+            if (emptyState) emptyState.style.display = '';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+        if (table) table.style.display = '';
+
+        logs.forEach(entry => {
+            let badgeClass = 'log-badge-success';
+            if (entry.status === 'FAILED') badgeClass = 'log-badge-failed';
+            else if (entry.status === 'BLOCKED') badgeClass = 'log-badge-blocked';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-family:monospace;font-size:11px;white-space:nowrap;color:var(--text-muted);">${escapeHtml(entry.datetime)}</td>
+                <td><span class="log-action-badge">${escapeHtml(entry.action)}</span></td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;" title="${escapeHtml(entry.target)}">${escapeHtml(entry.target)}</td>
+                <td><span class="log-badge ${badgeClass}">${escapeHtml(entry.status)}</span></td>
+                <td style="font-size:11px;color:var(--text-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(entry.detail)}">${escapeHtml(entry.detail)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function handleClearLog() {
+        if (!confirm('Hapus seluruh riwayat aktivitas?\nTindakan ini tidak dapat dibatalkan!')) return;
+        const formData = new FormData();
+        formData.append('csrf_token', state.csrfToken);
+        formData.append('action', 'clear_log');
+        const data = await requestApi('?action=clear_log', { method: 'POST', body: formData });
+        showToast(data.message || (data.success ? 'Log dihapus.' : 'Gagal.'), data.success ? 'success' : 'error');
+        if (data.success) await loadActivityLog();
+    }
+
     async function handleNewFile(e) {
         e.preventDefault();
         const inputName = document.getElementById('inputFileName');

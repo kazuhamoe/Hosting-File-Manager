@@ -544,7 +544,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         case 'delete':
             $path = $_POST['path'] ?? '';
-            jsonResponse(FileManager::deleteItem($path));
+            jsonResponse(FileManager::trashItem($path));
+
+        case 'trash':
+            $path = $_POST['path'] ?? '';
+            jsonResponse(FileManager::trashItem($path));
+
+        case 'bulk_trash':
+            $paths = $_POST['paths'] ?? [];
+            if (is_string($paths)) {
+                $paths = json_decode($paths, true) ?: [$paths];
+            }
+            jsonResponse(FileManager::bulkTrash((array)$paths));
+
+        case 'restore_trash':
+            $trashId = $_POST['trash_id'] ?? '';
+            jsonResponse(FileManager::restoreFromTrash($trashId));
+
+        case 'delete_permanent':
+            $trashId = $_POST['trash_id'] ?? '';
+            jsonResponse(FileManager::deletePermanent($trashId));
+
+        case 'empty_trash':
+            jsonResponse(FileManager::emptyTrash());
 
         case 'copy':
             $source = $_POST['source'] ?? '';
@@ -586,7 +608,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (is_string($paths)) {
                 $paths = json_decode($paths, true) ?: [$paths];
             }
-            jsonResponse(FileManager::bulkDelete((array)$paths));
+            jsonResponse(FileManager::bulkTrash((array)$paths));
 
         case 'bulk_copy':
             $paths = $_POST['paths'] ?? [];
@@ -663,6 +685,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'settings'        => $allSys
             ]);
 
+        case 'clear_log':
+            jsonResponse(Logger::clearLog());
+
         case 'duplicate':
             $path = (string)($_POST['path'] ?? '');
             jsonResponse(FileManager::duplicateItem($path));
@@ -733,6 +758,15 @@ if (!empty($action)) {
         case 'edit_load':
             $path = $_GET['path'] ?? '';
             jsonResponse(FileManager::getFileContent($path));
+
+        case 'list_trash':
+            jsonResponse(FileManager::listTrash());
+
+        case 'get_logs':
+            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 200;
+            $filter = (string)($_GET['filter'] ?? '');
+            $actionFilter = (string)($_GET['action_filter'] ?? '');
+            jsonResponse(Logger::getLogs($limit, $filter, $actionFilter));
 
         default:
             jsonResponse(['success' => false, 'message' => 'Aksi GET tidak dikenal.'], 400);
@@ -913,6 +947,17 @@ if (!empty($action)) {
                     <svg id="svgViewList" class="btn-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                     <svg id="svgViewGrid" class="btn-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                     <span id="txtViewMode">Grid</span>
+                </button>
+
+                <button id="btnTrash" class="btn btn-secondary btn-sm btn-trash-trigger" title="Recycle Bin / Trash">
+                    <svg class="btn-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    <span>Trash</span>
+                    <span id="trashBadge" class="trash-badge" style="display:none;">0</span>
+                </button>
+
+                <button id="btnActivityLog" class="btn btn-secondary btn-sm btn-log-trigger" title="Riwayat Aktivitas (Activity Log)">
+                    <svg class="btn-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <span>Log</span>
                 </button>
             </div>
             
@@ -1731,5 +1776,101 @@ if (!empty($action)) {
     });
     </script>
     <script src="assets/js/app.js?v=<?= $jsVer ?>"></script>
+
+    <!-- ============================== MODAL: RECYCLE BIN / TRASH ============================== -->
+    <div class="modal-backdrop" id="modalTrash">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    Recycle Bin / Trash
+                </h3>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <button id="btnEmptyTrash" class="btn btn-danger btn-sm" style="font-size:12px;">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:3px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+                        Kosongkan Trash
+                    </button>
+                    <button class="modal-close" aria-label="Tutup">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" style="padding:0; max-height:60vh; overflow-y:auto; -webkit-overflow-scrolling:touch;">
+                <div id="trashEmptyState" style="display:none; text-align:center; padding:40px 20px; color:var(--text-muted);">
+                    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4;display:block;margin:0 auto 12px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    <p style="margin:0;font-size:14px;">Trash kosong</p>
+                </div>
+                <table class="file-table" id="trashTable" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th class="th-name">Nama</th>
+                            <th class="th-type" style="width:40px;">Tipe</th>
+                            <th class="th-mtime">Dihapus Pada</th>
+                            <th class="th-name">Path Asal</th>
+                            <th class="th-actions" style="text-align:right; width:180px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trashTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== MODAL: ACTIVITY LOG ============================== -->
+    <div class="modal-backdrop" id="modalActivityLog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    Activity Log
+                </h3>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <button id="btnRefreshLog" class="btn btn-secondary btn-sm" style="font-size:12px;" title="Refresh">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    </button>
+                    <button id="btnClearLog" class="btn btn-danger btn-sm" style="font-size:12px;">Hapus Log</button>
+                    <button class="modal-close" aria-label="Tutup">&times;</button>
+                </div>
+            </div>
+            <div style="padding:12px 16px; border-bottom:1px solid var(--border-color); display:flex; gap:8px; flex-wrap:wrap;">
+                <input type="text" id="logFilterText" placeholder="Filter teks..." style="flex:1; min-width:140px; padding:6px 10px; border:1px solid var(--border-color); border-radius:6px; background:var(--input-bg,#1e293b); color:var(--text-primary); font-size:12px;">
+                <select id="logFilterAction" style="padding:6px 10px; border:1px solid var(--border-color); border-radius:6px; background:var(--input-bg,#1e293b); color:var(--text-primary); font-size:12px;">
+                    <option value="">Semua Aksi</option>
+                    <option value="UPLOAD">UPLOAD</option>
+                    <option value="TRASH">TRASH (delete)</option>
+                    <option value="DELETE_PERMANENT">DELETE PERMANENT</option>
+                    <option value="RESTORE">RESTORE</option>
+                    <option value="RENAME">RENAME</option>
+                    <option value="COPY">COPY</option>
+                    <option value="MOVE">MOVE</option>
+                    <option value="EDIT">EDIT</option>
+                    <option value="NEW_FILE">NEW FILE</option>
+                    <option value="NEW_FOLDER">NEW FOLDER</option>
+                    <option value="CHMOD">CHMOD</option>
+                    <option value="EXTRACT">EXTRACT</option>
+                    <option value="DUPLICATE">DUPLICATE</option>
+                    <option value="CLEAR_LOG">CLEAR LOG</option>
+                </select>
+                <span id="logCountBadge" style="font-size:11px;color:var(--text-muted);align-self:center;"></span>
+            </div>
+            <div class="modal-body" style="padding:0; max-height:55vh; overflow-y:auto; -webkit-overflow-scrolling:touch;">
+                <div id="logEmptyState" style="display:none; text-align:center; padding:40px 20px; color:var(--text-muted);">
+                    <p style="margin:0;font-size:14px;">Belum ada log aktivitas</p>
+                </div>
+                <table class="file-table" id="logTable" style="display:none; font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th style="width:140px;">Waktu</th>
+                            <th style="width:90px;">Aksi</th>
+                            <th>Target</th>
+                            <th style="width:80px;">Status</th>
+                            <th>Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logTableBody"></tbody>
+                </table>
+            </div>
+            <div style="padding:8px 16px; border-top:1px solid var(--border-color); font-size:11px; color:var(--text-muted);" id="logFileSizeInfo"></div>
+        </div>
+    </div>
+
 </body>
 </html>

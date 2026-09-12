@@ -3147,4 +3147,123 @@ button, .btn, a, .grid-card, .file-table tr, .item-name-cell, .action-dropdown, 
     color: #fef08a;
 }
 
+/* ==========================================================================
+   RECYCLE BIN & ACTIVITY LOG STYLES
+   ========================================================================== */
+
+/* Trash badge counter on toolbar button */
+.trash-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    margin-left: 3px;
+    vertical-align: middle;
+}
+
+/* Btn trash trigger — subtle danger hint */
+.btn-trash-trigger {
+    position: relative;
+}
+.btn-trash-trigger:hover {
+    border-color: #ef4444 !important;
+    color: #fca5a5 !important;
+}
+
+/* Status badges in log table */
+.log-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+.log-badge-success {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+.log-badge-failed {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.log-badge-blocked {
+    background: rgba(249, 115, 22, 0.15);
+    color: #fb923c;
+    border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+/* Action badges in log */
+.log-action-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: monospace;
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--text-secondary, #94a3b8);
+    white-space: nowrap;
+}
+
+/* Trash table restore/delete buttons */
+.btn-restore {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s;
+    touch-action: manipulation;
+}
+.btn-restore:hover { background: rgba(34, 197, 94, 0.3); }
+
+.btn-perm-delete {
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s;
+    touch-action: manipulation;
+}
+.btn-perm-delete:hover { background: rgba(239, 68, 68, 0.25); }
+
+/* Large modal for Trash & Log */
+.modal-lg .modal-dialog {
+    max-width: 860px;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .log-badge-success { color: #4ade80; }
+[data-theme="dark"] .log-badge-failed  { color: #f87171; }
+[data-theme="dark"] .log-badge-blocked { color: #fb923c; }
+[data-theme="dark"] .log-action-badge  { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
+
+/* Mobile responsive for trash/log modals */
+@media (max-width: 640px) {
+    .btn-trash-trigger span:not(.trash-badge),
+    .btn-log-trigger span {
+        display: none;
+    }
+    #trashTable th.th-name:last-of-type,
+    #trashTable td:nth-child(4) {
+        display: none;
+    }
+}
 

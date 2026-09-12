@@ -1,0 +1,61 @@
+<?php
+define('APP_INIT', true);
+define('STORAGE_PATH', __DIR__ . '/../storage');
+define('LOG_FILE', __DIR__ . '/../storage/logs/test_log_audit.log');
+$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+$_SERVER['REQUEST_METHOD'] = 'GET';
+require_once __DIR__ . '/../app/Security.php';
+require_once __DIR__ . '/../app/Logger.php';
+$passed=0;$failed=0;$errors=[];
+function ok(bool $c,string $m):void{global $passed,$failed,$errors;if($c){echo"  PASS: $m\n";$passed++;}else{echo"  FAIL: $m\n";$failed++;$errors[]=$m;}}
+echo "\n=== Activity Log Test Suite ===\n\n";
+// Ensure clean test log
+@file_put_contents(LOG_FILE,'');
+echo "--- TEST 1: Logger::log() writes entry ---\n";
+Logger::log('UPLOAD','/test/file.txt','SUCCESS','123 bytes');
+Logger::log('TRASH','/test/old.php','SUCCESS','moved to trash');
+Logger::log('RENAME','/test/a.txt -> /test/b.txt','SUCCESS');
+$lines = file(LOG_FILE, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES);
+ok(count($lines)===3, 'log has 3 entries');
+echo "\n--- TEST 2: getLogs() basic read ---\n";
+$r = Logger::getLogs(100);
+ok($r['success'], 'getLogs success');
+ok(is_array($r['logs']), 'getLogs returns logs array');
+ok($r['total']===3, 'getLogs total=3');
+ok($r['file_exists']===true, 'getLogs file_exists=true');
+echo "\n--- TEST 3: getLogs parses fields correctly ---\n";
+$firstLog = $r['logs'][0]; // reversed = most recent first
+ok($firstLog['action']==='RENAME','parse action=RENAME');
+ok($firstLog['status']==='SUCCESS','parse status=SUCCESS');
+ok(strpos($firstLog['target'],'a.txt')!==false,'parse target contains a.txt');
+echo "\n--- TEST 4: getLogs filter by text ---\n";
+$r = Logger::getLogs(100,'UPLOAD');
+ok($r['success'],'getLogs with text filter success');
+ok($r['total']===1,'text filter returns 1 result');
+ok($r['logs'][0]['action']==='UPLOAD','filtered result is UPLOAD');
+echo "\n--- TEST 5: getLogs filter by action ---\n";
+$r = Logger::getLogs(100,'','TRASH');
+ok($r['success'],'getLogs with action filter success');
+ok($r['total']===1,'action filter returns 1 TRASH entry');
+echo "\n--- TEST 6: getLogs terbaru di atas (reversed) ---\n";
+$r = Logger::getLogs(100);
+ok($r['logs'][0]['action']==='RENAME','first entry is most recent (RENAME)');
+ok($r['logs'][2]['action']==='UPLOAD','last entry is oldest (UPLOAD)');
+echo "\n--- TEST 7: getLogs limit ---\n";
+$r = Logger::getLogs(2);
+ok($r['total']===2,'getLogs respects limit=2');
+echo "\n--- TEST 8: clearLog() ---\n";
+$r = Logger::clearLog();
+ok($r['success'],'clearLog success');
+$lines2 = file(LOG_FILE, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES);
+ok(count($lines2)===1,'clearLog leaves 1 entry (the CLEAR_LOG entry itself)');
+ok(strpos($lines2[0],'CLEAR_LOG')!==false,'the remaining entry is CLEAR_LOG');
+echo "\n--- TEST 9: getLogs on non-existent file ---\n";
+@unlink(LOG_FILE);
+$r = Logger::getLogs(10);
+ok($r['success'],'getLogs on missing file success');
+ok($r['file_exists']===false,'file_exists=false when log missing');
+ok($r['total']===0,'total=0 when log missing');
+echo "\n=== RESULTS: {$passed} passed, {$failed} failed ===\n";
+if(!empty($errors)){foreach($errors as $e)echo"  - $e\n";}
+exit($failed>0?1:0);
