@@ -1122,13 +1122,51 @@
     // --------------------------------------------------------------------------
     // Admin Settings Controller (Change Username & Password)
     // --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
+    // Settings Controller (System Config & Account Management)
+    // --------------------------------------------------------------------------
+    let currentSettingsCache = null;
+
     async function openSettingsModal() {
         const inputUser = document.getElementById('settingsUsername');
         const inputCurPass = document.getElementById('settingsCurrentPassword');
         const inputNewPass = document.getElementById('settingsNewPassword');
         const inputConfPass = document.getElementById('settingsConfirmPassword');
+        const inputRoot = document.getElementById('settingsAllowedRoot');
+        const inputUploadMb = document.getElementById('settingsMaxUploadSize');
+        const selectTimeout = document.getElementById('settingsSessionTimeout');
+        const checkDisk = document.getElementById('settingsShowDiskUsage');
+        const inputQuota = document.getElementById('settingsDiskQuotaMb');
+        const wrapQuota = document.getElementById('wrapperDiskQuota');
         const alertEl = document.getElementById('settingsAlert');
         const btnSubmit = document.getElementById('btnSubmitSettings');
+        const btnResetRoot = document.getElementById('btnResetRoot');
+
+        // Setup Tab Navigation
+        const tabBtns = document.querySelectorAll('.settings-tab-btn');
+        tabBtns.forEach(btn => {
+            btn.onclick = () => {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.settings-tab-pane').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                const targetId = btn.getAttribute('data-tab');
+                const pane = document.getElementById(targetId);
+                if (pane) pane.classList.add('active');
+            };
+        });
+
+        // Set default active tab
+        document.getElementById('tabBtnSystem')?.classList.add('active');
+        document.getElementById('tabBtnAccount')?.classList.remove('active');
+        document.getElementById('tabSystemConfig')?.classList.add('active');
+        document.getElementById('tabAccountConfig')?.classList.remove('active');
+
+        // Setup Disk Usage Toggle
+        if (checkDisk && wrapQuota) {
+            checkDisk.onchange = () => {
+                wrapQuota.style.display = checkDisk.checked ? 'block' : 'none';
+            };
+        }
 
         if (inputCurPass) inputCurPass.value = '';
         if (inputNewPass) inputNewPass.value = '';
@@ -1140,17 +1178,44 @@
         }
         if (btnSubmit) {
             btnSubmit.disabled = false;
-            btnSubmit.textContent = 'Simpan Perubahan';
+            btnSubmit.textContent = 'Simpan Pengaturan';
         }
 
         openModal(elements.modalSettings);
 
         // Fetch current settings
         const data = await requestApi('?action=get_settings');
-        if (data && data.success && inputUser) {
-            inputUser.value = data.username || 'admin';
+        if (data && data.success) {
+            currentSettingsCache = data;
+            if (inputUser) inputUser.value = data.username || 'admin';
+            if (inputRoot) inputRoot.value = data.allowed_root || '';
+            if (inputUploadMb) inputUploadMb.value = data.max_upload_size_mb || 200;
+            if (selectTimeout) selectTimeout.value = String(data.session_timeout || 2592000);
+            if (checkDisk) {
+                checkDisk.checked = !!data.show_disk_usage;
+                if (wrapQuota) wrapQuota.style.display = data.show_disk_usage ? 'block' : 'none';
+            }
+            if (inputQuota) inputQuota.value = data.disk_quota_mb || 0;
+
+            const infoUp = document.getElementById('infoUploadMax');
+            const infoPost = document.getElementById('infoPostMax');
+            const infoMem = document.getElementById('infoMemLimit');
+            if (infoUp) infoUp.textContent = data.server_limits?.upload_max_filesize || 'N/A';
+            if (infoPost) infoPost.textContent = data.server_limits?.post_max_size || 'N/A';
+            if (infoMem) infoMem.textContent = data.server_limits?.memory_limit || 'N/A';
         }
-        setTimeout(() => inputCurPass?.focus(), 50);
+
+        // Reset Root handler
+        if (btnResetRoot) {
+            btnResetRoot.onclick = () => {
+                if (currentSettingsCache && currentSettingsCache.default_root && inputRoot) {
+                    inputRoot.value = currentSettingsCache.default_root;
+                    showToast('Path root disetel ke direktori bawaan sistem.', 'info');
+                }
+            };
+        }
+
+        setTimeout(() => inputCurPass?.focus(), 80);
     }
     window.hfmOpenSettingsModal = openSettingsModal;
     window.openSettingsModal = openSettingsModal;
@@ -1161,6 +1226,11 @@
         const inputCurPass = document.getElementById('settingsCurrentPassword');
         const inputNewPass = document.getElementById('settingsNewPassword');
         const inputConfPass = document.getElementById('settingsConfirmPassword');
+        const inputRoot = document.getElementById('settingsAllowedRoot');
+        const inputUploadMb = document.getElementById('settingsMaxUploadSize');
+        const selectTimeout = document.getElementById('settingsSessionTimeout');
+        const checkDisk = document.getElementById('settingsShowDiskUsage');
+        const inputQuota = document.getElementById('settingsDiskQuotaMb');
         const alertEl = document.getElementById('settingsAlert');
         const btnSubmit = document.getElementById('btnSubmitSettings');
 
@@ -1168,6 +1238,12 @@
         const currentPassword = inputCurPass?.value || '';
         const newPassword = inputNewPass?.value || '';
         const confirmPassword = inputConfPass?.value || '';
+
+        const allowedRoot = inputRoot?.value.trim() || '';
+        const maxUploadMb = parseInt(inputUploadMb?.value, 10) || 200;
+        const sessionTimeout = parseInt(selectTimeout?.value, 10) || 2592000;
+        const showDiskUsage = checkDisk?.checked ? '1' : '0';
+        const diskQuotaMb = parseInt(inputQuota?.value, 10) || 0;
 
         const showAlert = (msg, isSuccess = false) => {
             if (!alertEl) return;
@@ -1178,6 +1254,7 @@
 
         if (!currentPassword) {
             showAlert('Password saat ini wajib diisi untuk verifikasi keamanan.');
+            inputCurPass?.focus();
             return;
         }
 
@@ -1207,6 +1284,11 @@
         formData.append('current_password', currentPassword);
         formData.append('new_username', newUsername);
         formData.append('new_password', newPassword);
+        formData.append('allowed_root', allowedRoot);
+        formData.append('max_upload_size_mb', maxUploadMb);
+        formData.append('session_timeout', sessionTimeout);
+        formData.append('show_disk_usage', showDiskUsage);
+        formData.append('disk_quota_mb', diskQuotaMb);
 
         const data = await requestApi('?action=update_settings', {
             method: 'POST',
@@ -1215,15 +1297,22 @@
 
         if (btnSubmit) {
             btnSubmit.disabled = false;
-            btnSubmit.textContent = 'Simpan Perubahan';
+            btnSubmit.textContent = 'Simpan Pengaturan';
         }
 
         if (data && data.success) {
-            showToast(data.message || 'Pengaturan akun berhasil disimpan.', 'success');
-            if (elements.headerUserBadge) {
+            showToast(data.message || 'Pengaturan berhasil disimpan.', 'success');
+            if (elements.headerUserBadge && data.username) {
                 elements.headerUserBadge.textContent = `User: ${data.username}`;
             }
             closeActiveModals();
+            // Muat ulang daftar berkas dan disk meter jika root atau disk widget diperbarui
+            if (data.system_updated) {
+                loadDirectory(state.currentPath);
+                if (typeof updateDiskMeter === 'function') {
+                    updateDiskMeter();
+                }
+            }
         } else {
             showAlert(data?.message || 'Gagal memperbarui pengaturan.');
             showToast(data?.message || 'Gagal memperbarui pengaturan.', 'error');

@@ -2214,3 +2214,76 @@ body {
     color: #7dd3fc;
 }
 
+/* ==========================================================================
+   Settings Modal Tabs & System Config UI
+   ========================================================================== */
+.settings-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 0 16px;
+    background: #f8fafc;
+}
+
+.settings-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.settings-tab-btn:hover {
+    color: #0284c7;
+    background: rgba(2, 132, 199, 0.04);
+}
+
+.settings-tab-btn.active {
+    color: #0284c7;
+    border-bottom-color: #0284c7;
+    font-weight: 600;
+    background: #ffffff;
+}
+
+.settings-tab-pane {
+    display: none;
+}
+
+.settings-tab-pane.active {
+    display: block;
+}
+
+[data-theme="dark"] .settings-tabs {
+    background: #090e1a;
+    border-bottom-color: #334155;
+}
+
+[data-theme="dark"] .settings-tab-btn {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .settings-tab-btn:hover {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.05);
+}
+
+[data-theme="dark"] .settings-tab-btn.active {
+    color: #38bdf8;
+    border-bottom-color: #38bdf8;
+    background: #0f172a;
+}
+
+[data-theme="dark"] #settingsPhpServerInfo {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+}
+

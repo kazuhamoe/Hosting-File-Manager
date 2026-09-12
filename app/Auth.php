@@ -190,6 +190,19 @@ class Auth
     }
 
     /**
+     * Memverifikasi apakah password saat ini cocok dengan kredensial aktif
+     */
+    public static function verifyPassword(string $password): bool
+    {
+        $creds = self::getStoredCredentials();
+        $expectedHash = $creds['password_hash'];
+        if (!empty($expectedHash) && password_verify($password, $expectedHash)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Memperbarui username dan/atau password admin secara dinamis dan aman.
      */
     public static function updateCredentials(string $currentPassword, string $newUsername, string $newPassword): array

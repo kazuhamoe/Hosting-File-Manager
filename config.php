@@ -30,10 +30,19 @@ if (!defined('APP_INIT') && basename($_SERVER['PHP_SELF'] ?? '') === 'config.php
  * Anda juga dapat menentukan path secara manual jika diinginkan, contoh:
  *   define('ALLOWED_ROOT', '/home/username/public_html');
  */
+// Muat pengaturan dinamis dari storage/settings.json jika ada
+$customSettingsFile = __DIR__ . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'settings.json';
+$customSettings = file_exists($customSettingsFile) ? @json_decode(file_get_contents($customSettingsFile), true) : [];
+if (!is_array($customSettings)) {
+    $customSettings = [];
+}
+
 $detectedRoot = __DIR__;
 $parentDir = dirname(__DIR__);
 
-if (@is_dir($parentDir) && @is_readable($parentDir)) {
+if (!empty($customSettings['allowed_root']) && @is_dir($customSettings['allowed_root'])) {
+    $detectedRoot = realpath($customSettings['allowed_root']) ?: $customSettings['allowed_root'];
+} elseif (@is_dir($parentDir) && @is_readable($parentDir)) {
     if (is_dir($parentDir . DIRECTORY_SEPARATOR . 'public_html')) {
         $detectedRoot = $parentDir;
     } elseif (basename($parentDir) === 'public_html') {
@@ -41,7 +50,9 @@ if (@is_dir($parentDir) && @is_readable($parentDir)) {
     }
 }
 
-define('ALLOWED_ROOT', $detectedRoot);
+if (!defined('ALLOWED_ROOT')) {
+    define('ALLOWED_ROOT', $detectedRoot);
+}
 
 // --------------------------------------------------------------------------
 // 2. PROTECTED FILES & DIRECTORIES
@@ -77,7 +88,10 @@ define('AUTH_USER', 'admin');
 define('AUTH_PASS_HASH', ''); // Kosong secara default: Mengaktifkan wizard pembuatan akun otomatis saat pertama kali dibuka di hosting
 
 // Session Timeout (dalam detik). Default: 2592000 detik = 30 hari (Stay Logged In)
-define('SESSION_TIMEOUT', 2592000);
+$sessionTimeoutVal = isset($customSettings['session_timeout']) ? (int)$customSettings['session_timeout'] : 2592000;
+if (!defined('SESSION_TIMEOUT')) {
+    define('SESSION_TIMEOUT', 2592000);
+}
 
 // Rate Limiting Login (Maksimal percobaan gagal sebelum di-lockout)
 define('MAX_LOGIN_ATTEMPTS', 10);
@@ -91,12 +105,16 @@ define('LOG_FILE', STORAGE_PATH . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPAR
 define('TEMP_PATH', STORAGE_PATH . DIRECTORY_SEPARATOR . 'temp');
 define('LOGIN_ATTEMPTS_FILE', STORAGE_PATH . DIRECTORY_SEPARATOR . 'login_attempts.json');
 define('CREDENTIALS_FILE', STORAGE_PATH . DIRECTORY_SEPARATOR . 'credentials.json');
+define('SETTINGS_FILE', STORAGE_PATH . DIRECTORY_SEPARATOR . 'settings.json');
 
 // --------------------------------------------------------------------------
 // 5. UPLOAD SETTINGS
 // --------------------------------------------------------------------------
 // Batas maksimal upload file (dalam bytes). 0 = mengikuti batasan php.ini
-define('MAX_UPLOAD_SIZE', 200 * 1024 * 1024); // 200 MB
+$maxUploadVal = isset($customSettings['max_upload_size']) ? (int)$customSettings['max_upload_size'] : (200 * 1024 * 1024);
+if (!defined('MAX_UPLOAD_SIZE')) {
+    define('MAX_UPLOAD_SIZE', 209715200); // 200 MB // 350 MB // 200 MB // 350 MB // 200 MB
+}
 
 // File preview text extension whitelist
 define('TEXT_PREVIEW_EXTENSIONS', [
@@ -118,6 +136,13 @@ define('TEXT_PREVIEW_EXTENSIONS', [
  * - Anda juga dapat menentukan kuota akun hosting Anda secara manual dalam MB pada
  *   DISK_QUOTA_MB (contoh: 5120 untuk kuota 5 GB, 10240 untuk 10 GB, 0 = ikuti partisi server).
  */
-define('SHOW_DISK_USAGE', false); // Disembunyikan secara default agar tidak menampilkan kapasitas drive 2.8 TB server pusat
-define('DISK_QUOTA_MB', 0); // 0 = otomatis ikuti partisi, atau isi kuota paket hosting Anda dalam MB (contoh: 5120 = 5 GB)
+$showDiskVal = isset($customSettings['show_disk_usage']) ? (bool)$customSettings['show_disk_usage'] : false;
+if (!defined('SHOW_DISK_USAGE')) {
+    define('SHOW_DISK_USAGE', false); // Disembunyikan secara default agar tidak menampilkan kapasitas drive 2.8 TB server pusat
+}
+
+$diskQuotaVal = isset($customSettings['disk_quota_mb']) ? (int)$customSettings['disk_quota_mb'] : 0;
+if (!defined('DISK_QUOTA_MB')) {
+    define('DISK_QUOTA_MB', 0); // 0 = otomatis ikuti partisi, atau isi kuota paket hosting Anda dalam MB (contoh: 5120 = 5 GB)
+}
 

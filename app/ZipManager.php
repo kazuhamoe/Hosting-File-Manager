@@ -294,8 +294,8 @@ class ZipManager
 
             // Penanganan jika file sudah ada
             if (file_exists($targetPath)) {
-                // Jangan pernah menimpa file credentials.json yang sudah ada agar akun admin tidak ter-reset
-                if (strcasecmp(basename($targetPath), 'credentials.json') === 0) {
+                // Jangan pernah menimpa file credentials.json atau settings.json yang sudah ada agar akun admin & konfigurasi tidak ter-reset
+                if (strcasecmp(basename($targetPath), 'credentials.json') === 0 || strcasecmp(basename($targetPath), 'settings.json') === 0) {
                     $skippedCount++;
                     continue;
                 }

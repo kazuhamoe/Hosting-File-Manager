@@ -88,9 +88,9 @@ File Manager ini menerapkan sistem **First-Time Setup Wizard ("Create Password")
 
 ---
 
-## ⚙️ Konfigurasi (`config.php`)
+## ⚙️ Konfigurasi (`config.php` & Modal Pengaturan UI)
 
-Seluruh pengaturan sistem dapat disesuaikan pada berkas `config.php`:
+Seluruh pengaturan sistem kini dapat disesuaikan langsung melalui antarmuka web pada **Modal Pengaturan (⚙️ Pengaturan)** atau secara manual pada berkas `config.php`:
 
 ```php
 // Batas direktori yang boleh diakses (Security Boundary)
@@ -103,9 +103,14 @@ define('SESSION_TIMEOUT', 2592000);
 // Batas maksimal upload file (dalam bytes, contoh 200 MB)
 define('MAX_UPLOAD_SIZE', 200 * 1024 * 1024);
 
+// Tampilkan indikator kuota disk cPanel (default false untuk shared hosting)
+define('SHOW_DISK_USAGE', false);
+
 // Hash password fallback (dikosongkan secara default untuk mengaktifkan wizard pembuatan akun)
 define('AUTH_PASS_HASH', '');
 ```
+
+> 💡 **Tip:** Pengaturan yang disimpan melalui antarmuka web (UI) otomatis disimpan ke `storage/settings.json` sehingga tidak akan hilang atau ter-reset meskipun Anda memperbarui versi file manager di masa mendatang.
 
 ---
 

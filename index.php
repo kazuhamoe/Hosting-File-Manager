@@ -122,6 +122,7 @@ require_once __DIR__ . '/app/Logger.php';
 require_once __DIR__ . '/app/Auth.php';
 require_once __DIR__ . '/app/FileManager.php';
 require_once __DIR__ . '/app/ZipManager.php';
+require_once __DIR__ . '/app/ConfigManager.php';
 
 Auth::startSession();
 
@@ -598,9 +599,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         case 'update_settings':
             $currentPassword = (string)($_POST['current_password'] ?? '');
+            if ($currentPassword === '') {
+                jsonResponse(['success' => false, 'message' => 'Password saat ini wajib diisi untuk verifikasi keamanan.'], 400);
+            }
+
             $newUsername = trim((string)($_POST['new_username'] ?? ''));
             $newPassword = (string)($_POST['new_password'] ?? '');
-            jsonResponse(Auth::updateCredentials($currentPassword, $newUsername, $newPassword));
+            $accountUpdated = false;
+            $updatedUser = $_SESSION['hfm_username'] ?? 'admin';
+
+            // 1. Update Kredensial Akun (jika username atau password baru diisi)
+            if ($newUsername !== '' || $newPassword !== '') {
+                $accRes = Auth::updateCredentials($currentPassword, $newUsername, $newPassword);
+                if (!$accRes['success']) {
+                    jsonResponse($accRes, 400);
+                }
+                $accountUpdated = true;
+                $updatedUser = $accRes['username'] ?? $updatedUser;
+                if ($newPassword !== '') {
+                    $currentPassword = $newPassword;
+                }
+            }
+
+            // 2. Update Konfigurasi Sistem (jika field konfigurasi dikirim)
+            $hasSystemConfig = isset($_POST['allowed_root']) || isset($_POST['max_upload_size_mb']) || isset($_POST['session_timeout']) || isset($_POST['show_disk_usage']);
+            $systemUpdated = false;
+
+            if ($hasSystemConfig) {
+                $sysData = [
+                    'allowed_root'       => (string)($_POST['allowed_root'] ?? ''),
+                    'max_upload_size_mb' => isset($_POST['max_upload_size_mb']) ? (int)$_POST['max_upload_size_mb'] : 200,
+                    'session_timeout'    => isset($_POST['session_timeout']) ? (int)$_POST['session_timeout'] : 2592000,
+                    'show_disk_usage'    => !empty($_POST['show_disk_usage']) && ($_POST['show_disk_usage'] === '1' || $_POST['show_disk_usage'] === 'true' || $_POST['show_disk_usage'] === true),
+                    'disk_quota_mb'      => isset($_POST['disk_quota_mb']) ? (int)$_POST['disk_quota_mb'] : 0
+                ];
+
+                $confRes = ConfigManager::saveSettings($sysData, $currentPassword);
+                if (!$confRes['success']) {
+                    jsonResponse($confRes, 400);
+                }
+                $systemUpdated = true;
+            }
+
+            $messages = [];
+            if ($systemUpdated) $messages[] = 'Konfigurasi sistem berhasil diperbarui.';
+            if ($accountUpdated) $messages[] = 'Akun administrator berhasil diperbarui.';
+            if (empty($messages)) $messages[] = 'Pengaturan berhasil disimpan.';
+
+            $allSys = ConfigManager::getAllSettings();
+            jsonResponse([
+                'success'         => true,
+                'message'         => implode(' ', $messages),
+                'username'        => $updatedUser,
+                'account_updated' => $accountUpdated,
+                'system_updated'  => $systemUpdated,
+                'settings'        => $allSys
+            ]);
 
         case 'duplicate':
             $path = (string)($_POST['path'] ?? '');
@@ -616,10 +670,21 @@ if (!empty($action)) {
     switch ($action) {
         case 'get_settings':
             $creds = Auth::getStoredCredentials();
+            $sys = ConfigManager::getAllSettings();
             jsonResponse([
-                'success' => true,
-                'username' => $creds['username'] ?? 'admin',
-                'updated_at' => $creds['updated_at'] ?? null
+                'success'            => true,
+                'username'           => $creds['username'] ?? 'admin',
+                'updated_at'         => $creds['updated_at'] ?? null,
+                'allowed_root'       => $sys['allowed_root'],
+                'active_root'        => $sys['active_allowed_root'],
+                'default_root'       => $sys['default_root'],
+                'session_timeout'    => $sys['session_timeout'],
+                'max_upload_size'    => $sys['max_upload_size'],
+                'max_upload_size_mb' => $sys['max_upload_size_mb'],
+                'show_disk_usage'    => $sys['show_disk_usage'],
+                'disk_quota_mb'      => $sys['disk_quota_mb'],
+                'server_limits'      => $sys['server_limits'],
+                'is_customized'      => $sys['is_customized']
             ]);
 
         case 'list':
@@ -1334,53 +1399,135 @@ if (!empty($action)) {
         </div>
     </div>
 
-    <!-- Modal: Admin Settings (Ganti Username & Password) -->
+    <!-- Modal: Settings (Konfigurasi Sistem & Akun) -->
     <div class="modal-backdrop" id="modalSettings">
-        <div class="modal-box">
+        <div class="modal-box modal-lg" style="max-width: 580px;">
             <form id="formSettings">
                 <div class="modal-header">
-                    <h3>Pengaturan Akun Admin</h3>
+                    <h3>Pengaturan & Konfigurasi</h3>
                     <button type="button" class="modal-close">&times;</button>
                 </div>
-                <div class="modal-body">
+                
+                <!-- Navigasi Tab Pengaturan -->
+                <div class="settings-tabs">
+                    <button type="button" class="settings-tab-btn active" data-tab="tabSystemConfig" id="tabBtnSystem">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                        <span>Konfigurasi Sistem</span>
+                    </button>
+                    <button type="button" class="settings-tab-btn" data-tab="tabAccountConfig" id="tabBtnAccount">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span>Akun Administrator</span>
+                    </button>
+                </div>
+
+                <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
                     <div id="settingsAlert" class="alert" style="display: none; margin-bottom: 14px;"></div>
-                    
-                    <div class="form-group" style="margin-bottom: 14px;">
-                        <label for="settingsUsername">Username Login:</label>
-                        <input type="text" id="settingsUsername" class="form-control" required autocomplete="username" placeholder="Masukkan username">
-                        <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
-                            Username untuk masuk ke File Manager (minimal 3 karakter).
-                        </small>
-                    </div>
 
-                    <div class="form-group" style="margin-bottom: 14px;">
-                        <label for="settingsCurrentPassword">Password Saat Ini (Konfirmasi Keamanan): <span style="color: #dc2626;">*</span></label>
-                        <input type="password" id="settingsCurrentPassword" class="form-control" required autocomplete="current-password" placeholder="Masukkan password saat ini">
-                        <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
-                            Wajib diisi untuk memverifikasi bahwa Anda adalah pemilik akun.
-                        </small>
-                    </div>
-
-                    <div style="border-top: 1px solid #e2e8f0; margin: 16px 0 12px 0; padding-top: 12px;">
-                        <span style="font-weight: 600; font-size: 12px; color: #334155; display: block; margin-bottom: 10px;">Ganti Password (Opsional):</span>
-                        
-                        <div class="form-group" style="margin-bottom: 12px;">
-                            <label for="settingsNewPassword">Password Baru:</label>
-                            <input type="password" id="settingsNewPassword" class="form-control" autocomplete="new-password" placeholder="Kosongkan jika tidak ingin mengubah password">
+                    <!-- TAB 1: KONFIGURASI SISTEM -->
+                    <div class="settings-tab-pane active" id="tabSystemConfig">
+                        <!-- ALLOWED_ROOT -->
+                        <div class="form-group" style="margin-bottom: 14px;">
+                            <label for="settingsAllowedRoot">Batas Direktori Root (ALLOWED_ROOT):</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="settingsAllowedRoot" class="form-control" placeholder="Contoh: C:\xampp\htdocs atau /home/user/public_html">
+                                <button type="button" id="btnResetRoot" class="btn btn-secondary" style="white-space: nowrap; font-size: 12px; padding: 6px 12px;" title="Reset ke path default sistem">Default</button>
+                            </div>
                             <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
-                                Minimal 5 karakter jika ingin mengganti password.
+                                Folder batas maksimal navigasi file manager (Security Boundary).
                             </small>
                         </div>
 
+                        <!-- MAX_UPLOAD_SIZE & SESSION_TIMEOUT in 2 cols -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                            <div class="form-group">
+                                <label for="settingsMaxUploadSize">Batas Upload (MB):</label>
+                                <input type="number" id="settingsMaxUploadSize" class="form-control" min="1" max="10240" step="1" placeholder="200">
+                                <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
+                                    Batas per file (MAX_UPLOAD_SIZE).
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label for="settingsSessionTimeout">Masa Aktif Sesi:</label>
+                                <select id="settingsSessionTimeout" class="form-control">
+                                    <option value="86400">1 Hari (24 Jam)</option>
+                                    <option value="604800">7 Hari (1 Minggu)</option>
+                                    <option value="2592000">30 Hari (Stay Logged In)</option>
+                                    <option value="7776000">90 Hari (3 Bulan)</option>
+                                    <option value="31536000">1 Tahun</option>
+                                </select>
+                                <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
+                                    Durasi login tersimpan (SESSION_TIMEOUT).
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- DISK USAGE & QUOTA -->
+                        <div style="background: rgba(2, 132, 199, 0.05); border: 1px solid rgba(2, 132, 199, 0.15); border-radius: 6px; padding: 12px; margin-bottom: 14px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; margin-bottom: 6px;">
+                                <input type="checkbox" id="settingsShowDiskUsage" value="1" style="width: 16px; height: 16px; cursor: pointer;">
+                                <span>Tampilkan Widget Kuota Disk (SHOW_DISK_USAGE)</span>
+                            </label>
+                            <small style="color: #64748b; font-size: 11px; display: block; margin-bottom: 8px;">
+                                Tampilkan indikator kuota disk cPanel di header. Nonaktifkan pada shared hosting jika tidak ingin menampilkan total drive pusat 2.8 TB.
+                            </small>
+                            <div id="wrapperDiskQuota" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(2, 132, 199, 0.2);">
+                                <label for="settingsDiskQuotaMb" style="font-size: 12px; font-weight: 500;">Batas Kuota Paket Hosting (MB):</label>
+                                <input type="number" id="settingsDiskQuotaMb" class="form-control" min="0" step="100" placeholder="0 = otomatis ikuti partisi server">
+                                <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
+                                    Ketik kuota hosting Anda dalam MB (contoh: 5120 = 5 GB, 10240 = 10 GB). Nilai 0 = membaca kapasitas fisik partisi.
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Info Batasan PHP Server -->
+                        <div id="settingsPhpServerInfo" style="font-size: 11.5px; color: #64748b; line-height: 1.5; padding: 8px 12px; background: rgba(0,0,0,0.03); border-radius: 6px; border: 1px solid rgba(0,0,0,0.06);">
+                            <strong>Info PHP Server:</strong> upload_max: <span id="infoUploadMax">-</span> &bull; post_max: <span id="infoPostMax">-</span> &bull; mem_limit: <span id="infoMemLimit">-</span>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: AKUN ADMINISTRATOR -->
+                    <div class="settings-tab-pane" id="tabAccountConfig" style="display: none;">
+                        <div class="form-group" style="margin-bottom: 14px;">
+                            <label for="settingsUsername">Username Login:</label>
+                            <input type="text" id="settingsUsername" class="form-control" autocomplete="username" placeholder="Masukkan username">
+                            <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
+                                Username untuk masuk ke File Manager (minimal 3 karakter).
+                            </small>
+                        </div>
+
+                        <div style="border-top: 1px solid #e2e8f0; margin: 16px 0 12px 0; padding-top: 12px;">
+                            <span style="font-weight: 600; font-size: 12px; color: #334155; display: block; margin-bottom: 10px;">Ganti Password (Opsional):</span>
+                            
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label for="settingsNewPassword">Password Baru:</label>
+                                <input type="password" id="settingsNewPassword" class="form-control" autocomplete="new-password" placeholder="Kosongkan jika tidak ingin mengubah password">
+                                <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
+                                    Minimal 5 karakter jika ingin mengganti password.
+                                </small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="settingsConfirmPassword">Ulangi Password Baru:</label>
+                                <input type="password" id="settingsConfirmPassword" class="form-control" autocomplete="new-password" placeholder="Ketik ulang password baru">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VERIFIKASI KEAMANAN (SELALU MUNCUL DI BAWAH) -->
+                    <div style="border-top: 2px dashed #e2e8f0; margin: 16px 0 12px 0; padding-top: 14px;">
                         <div class="form-group">
-                            <label for="settingsConfirmPassword">Ulangi Password Baru:</label>
-                            <input type="password" id="settingsConfirmPassword" class="form-control" autocomplete="new-password" placeholder="Ketik ulang password baru">
+                            <label for="settingsCurrentPassword" style="font-weight: 600;">Password Saat Ini (Konfirmasi Keamanan): <span style="color: #dc2626;">*</span></label>
+                            <input type="password" id="settingsCurrentPassword" class="form-control" required autocomplete="current-password" placeholder="Masukkan password saat ini untuk konfirmasi">
+                            <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
+                                Wajib diisi untuk memverifikasi hak akses sebelum menyimpan perubahan.
+                            </small>
                         </div>
                     </div>
                 </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-modal-cancel">Batal</button>
-                    <button type="submit" class="btn btn-primary" id="btnSubmitSettings">Simpan Perubahan</button>
+                    <button type="submit" class="btn btn-primary" id="btnSubmitSettings">Simpan Pengaturan</button>
                 </div>
             </form>
         </div>
