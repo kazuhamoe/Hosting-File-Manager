@@ -22,8 +22,9 @@ echo "Membuat paket ZIP produksi...\n";
 // 1. Root files
 $zip->addFile($baseDir . '/index.php', 'index.php');
 $zip->addFile($baseDir . '/config.php', 'config.php');
+$zip->addFile($baseDir . '/updater.php', 'updater.php');
 $zip->addFile($baseDir . '/README.md', 'README.md');
-echo "  + index.php\n  + config.php\n  + README.md\n";
+echo "  + index.php\n  + config.php\n  + updater.php\n  + README.md\n";
 
 // 2. Core App Classes & app/index.php
 $zip->addEmptyDir('app');

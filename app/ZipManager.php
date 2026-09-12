@@ -292,6 +292,33 @@ class ZipManager
                     continue;
                 }
 
+                // Jika berkas yang akan ditimpa adalah config.php dan belum ada credentials.json,
+                // amankan hash kredensial lama ke storage/credentials.json agar akun admin tidak hilang
+                if (strcasecmp(basename($targetPath), 'config.php') === 0) {
+                    $possibleCredFile = dirname($targetPath) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'credentials.json';
+                    if (!file_exists($possibleCredFile)) {
+                        $oldConfContent = @file_get_contents($targetPath);
+                        if ($oldConfContent) {
+                            $uM = []; $hM = [];
+                            preg_match("/define\s*\(\s*['\"]AUTH_USER['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/", $oldConfContent, $uM);
+                            preg_match("/define\s*\(\s*['\"]AUTH_PASS_HASH['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/", $oldConfContent, $hM);
+                            $oldUser = !empty($uM[1]) ? $uM[1] : 'admin';
+                            $oldHash = !empty($hM[1]) ? $hM[1] : '';
+                            if (!empty($oldHash)) {
+                                if (!is_dir(dirname($possibleCredFile))) {
+                                    @mkdir(dirname($possibleCredFile), 0755, true);
+                                }
+                                @file_put_contents($possibleCredFile, json_encode([
+                                    'username' => $oldUser,
+                                    'password_hash' => $oldHash,
+                                    'updated_at' => date('Y-m-d H:i:s'),
+                                    'updated_by_ip' => 'auto-migrated-zip-extract'
+                                ], JSON_PRETTY_PRINT));
+                            }
+                        }
+                    }
+                }
+
                 if ($conflictStrategy === 'skip') {
                     $skippedCount++;
                     continue;

@@ -29,16 +29,50 @@ $errorMsg = "";
 $count = 0;
 
 if ($targetZip !== null && class_exists("ZipArchive")) {
+    // 1. Migrasi otomatis kredensial lama dari config.php jika belum ada credentials.json
+    $credFile = $dir . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'credentials.json';
+    $oldConfigFile = $dir . DIRECTORY_SEPARATOR . 'config.php';
+    if (file_exists($oldConfigFile) && !file_exists($credFile)) {
+        $oldConfigContent = @file_get_contents($oldConfigFile);
+        if ($oldConfigContent) {
+            $userMatch = [];
+            $hashMatch = [];
+            preg_match("/define\s*\(\s*['\"]AUTH_USER['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/", $oldConfigContent, $userMatch);
+            preg_match("/define\s*\(\s*['\"]AUTH_PASS_HASH['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/", $oldConfigContent, $hashMatch);
+            $savedUser = !empty($userMatch[1]) ? $userMatch[1] : 'admin';
+            $savedHash = !empty($hashMatch[1]) ? $hashMatch[1] : '';
+            if (!empty($savedHash)) {
+                if (!is_dir(dirname($credFile))) {
+                    @mkdir(dirname($credFile), 0755, true);
+                }
+                @file_put_contents($credFile, json_encode([
+                    'username' => $savedUser,
+                    'password_hash' => $savedHash,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                    'updated_by_ip' => 'auto-migrated-updater'
+                ], JSON_PRETTY_PRINT));
+            }
+        }
+    }
+
     $zip = new ZipArchive();
     $res = $zip->open($targetZip);
     if ($res === true) {
-        // Ekstrak semua file langsung ke direktori saat ini
+        // 2. Ekstrak file pembaruan langsung ke direktori saat ini tanpa menumpuk kredensial admin
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $entry = $zip->getNameIndex($i);
-            // Jangan timpa credentials.json jika sudah ada
-            if (file_exists($dir . DIRECTORY_SEPARATOR . $entry) && strcasecmp(basename($entry), "credentials.json") === 0) {
+            $targetPath = $dir . DIRECTORY_SEPARATOR . $entry;
+
+            // Jangan pernah timpa credentials.json jika sudah ada agar akun admin tidak ter-reset
+            if (file_exists($targetPath) && strcasecmp(basename($entry), "credentials.json") === 0) {
                 continue;
             }
+
+            // Jangan timpa config.php jika config.php lama sudah ada di hosting agar setelan tidak hilang
+            if (file_exists($targetPath) && strcasecmp(basename($entry), "config.php") === 0) {
+                continue;
+            }
+
             $zip->extractTo($dir, $entry);
             $count++;
         }
