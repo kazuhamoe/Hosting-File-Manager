@@ -2287,3 +2287,32 @@ body {
     color: #94a3b8 !important;
 }
 
+.settings-sub-section {
+    border-top: 1px solid var(--border, #e2e8f0);
+    margin: 16px 0 12px 0;
+    padding-top: 12px;
+}
+
+.settings-sub-title {
+    font-weight: 600;
+    font-size: 12px;
+    color: #334155;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.settings-security-confirm {
+    border-top: 1px solid var(--border, #e2e8f0);
+    margin: 16px 0 0 0;
+    padding-top: 14px;
+}
+
+[data-theme="dark"] .settings-sub-section,
+[data-theme="dark"] .settings-security-confirm {
+    border-top-color: #334155;
+}
+
+[data-theme="dark"] .settings-sub-title {
+    color: #cbd5e1;
+}
+

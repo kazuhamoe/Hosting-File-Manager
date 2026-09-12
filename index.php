@@ -1470,7 +1470,7 @@ if (!empty($action)) {
                             <small style="color: #64748b; font-size: 11px; display: block; margin-bottom: 8px;">
                                 Tampilkan indikator kuota disk cPanel di header. Nonaktifkan pada shared hosting jika tidak ingin menampilkan total drive pusat 2.8 TB.
                             </small>
-                            <div id="wrapperDiskQuota" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(2, 132, 199, 0.2);">
+                            <div id="wrapperDiskQuota" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(2, 132, 199, 0.15);">
                                 <label for="settingsDiskQuotaMb" style="font-size: 12px; font-weight: 500;">Batas Kuota Paket Hosting (MB):</label>
                                 <input type="number" id="settingsDiskQuotaMb" class="form-control" min="0" step="100" placeholder="0 = otomatis ikuti partisi server">
                                 <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
@@ -1495,8 +1495,8 @@ if (!empty($action)) {
                             </small>
                         </div>
 
-                        <div style="border-top: 1px solid #e2e8f0; margin: 16px 0 12px 0; padding-top: 12px;">
-                            <span style="font-weight: 600; font-size: 12px; color: #334155; display: block; margin-bottom: 10px;">Ganti Password (Opsional):</span>
+                        <div class="settings-sub-section">
+                            <span class="settings-sub-title">Ganti Password (Opsional):</span>
                             
                             <div class="form-group" style="margin-bottom: 12px;">
                                 <label for="settingsNewPassword">Password Baru:</label>
@@ -1514,8 +1514,8 @@ if (!empty($action)) {
                     </div>
 
                     <!-- VERIFIKASI KEAMANAN (SELALU MUNCUL DI BAWAH) -->
-                    <div style="border-top: 2px dashed #e2e8f0; margin: 16px 0 12px 0; padding-top: 14px;">
-                        <div class="form-group">
+                    <div class="settings-security-confirm">
+                        <div class="form-group" style="margin-bottom: 0;">
                             <label for="settingsCurrentPassword" style="font-weight: 600;">Password Saat Ini (Konfirmasi Keamanan): <span style="color: #dc2626;">*</span></label>
                             <input type="password" id="settingsCurrentPassword" class="form-control" required autocomplete="current-password" placeholder="Masukkan password saat ini untuk konfirmasi">
                             <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
