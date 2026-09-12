@@ -3,114 +3,151 @@
 [![PHP Version](https://img.shields.io/badge/PHP-7.4%20--%208.3%2B-blue.svg)](https://www.php.net/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero%20(Native%20PHP)-orange.svg)]()
+[![Release](https://img.shields.io/badge/Release-v2.0.0-purple.svg)](../../releases/latest)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 **Hosting File Manager** adalah web-based file manager standalone berbasis **PHP Native** yang dirancang khusus untuk mengelola file dan direktori hosting (`public_html`, subdomain, dsb.) langsung dari peramban (browser) tanpa ketergantungan pada cPanel API, database MySQL, ataupun framework eksternal.
 
-Dilengkapi dengan antarmuka modern layaknya cPanel File Manager / Desktop Explorer, kompresi & ekstraksi ZIP yang tangguh (bebas false-positive), in-browser Code Editor, sesi login persisten 30 hari, serta antarmuka pengaturan akun (*Admin Settings*).
+Dilengkapi antarmuka modern layaknya cPanel File Manager, kompresi & ekstraksi ZIP tangguh, in-browser Code Editor, **Recycle Bin**, **Activity Log Viewer**, sesi login persisten 30 hari, dan Admin Settings.
 
 <p align="center">
-  <img src="screenshots/dashboard-dark.png" alt="Hosting File Manager Dark Mode Dashboard" width="100%">
+  <img src="screenshots/dashboard-dark.png" alt="Hosting File Manager Dark Mode" width="100%">
 </p>
 
 ---
 
 ## ✨ Fitur Utama (Key Features)
 
-- **🖥️ Tampilan cPanel-like Modern:** Desain padat, intuitif, cepat, responsif, dengan ikon SVG bersih untuk semua jenis berkas.
-- **🌓 Mode Gelap / Terang (Dark / Light Theme Toggle):** Beralih tema secara mulus hanya dengan 1-klik, tersimpan di `localStorage` dan mendeteksi preferensi sistem.
-- **📊 Disk Usage / Quota Meter Widget:** Indikator visual real-time kapasitas disk server bergaya cPanel dengan kode warna dinamis (Hijau, Oranye, Merah) dan fallback aman.
-- **⚡ Zero Dependencies:** 100% PHP Native murni, tidak butuh Composer, Node.js, atau database. Tinggal upload langsung jalan.
-- **📦 ZIP Extractor & Compressor Tangguh:**
-  - Ekstrak berkas arsip `.zip` dengan opsi penanganan konflik (*Overwrite*, *Skip*, *Rename*).
-  - Proteksi **Anti-Zip Slip** ketat tanpa memblokir berkas website sah (`index.php`, `.htaccess`, `config.php`, `app/`, dsb.).
-  - Kompres multi-berkas atau folder langsung menjadi file `.zip`.
-- **📑 1-Click Duplicate / Backup File:** Gandakan berkas atau folder secara instan di direktori yang sama (`_copy`, `_copy2`, dst.) dari toolbar atau klik kanan.
-- **🚀 Upload Berkas Besar (> 100 MB):** Dukungan upload banyak file sekaligus (*multiple files*) dilengkapi real-time progress bar dan penanganan payload besar yang andal.
-- **🌈 In-Browser Code Editor & Syntax Highlighting:**
-  - Micro Syntax Highlighter bawaan (tanpa CDN/eksternal library) untuk PHP, JavaScript/JSON, HTML, CSS, SQL, dan Shell/Bash.
-  - Pemilihan bahasa otomatis (*Auto-Detection*) dan selector manual.
-  - Modal editor kode dengan nomor baris otomatis, **Layar Penuh (Fullscreen)**, dan **Toggle Word Wrap**.
-  - Shortcut keyboard (`Ctrl+S` untuk simpan, `Tab` untuk indentasi 4 spasi, `Esc` untuk keluar).
-- **🔒 Keamanan Kelas Hosting:**
-  - Perlindungan terhadap Path Traversal (`../`, null bytes, Windows reserved devices).
-  - Pembatasan filesystem kanonikal berbasis `ALLOWED_ROOT`.
-  - Rate Limiter proteksi brute-force login & perlindungan CSRF Token.
-  - Log audit aktivitas tersimpan aman di `storage/logs/audit.log`.
-- **⚙️ Antarmuka Pengaturan Akun (Admin Settings):**
-  - Ganti username dan password langsung dari UI web tanpa perlu mengedit kode konfigurasi.
-- **🕒 Sesi Login Persisten (Stay Logged In 30 Hari):**
-  - Menggunakan konfigurasi masa aktif sesi khusus agar tidak terputus saat berpindah tab atau menutup browser.
-- **🌐 Deteksi Cerdas Direktori cPanel:**
-  - Jika dipasang di subdomain (misal `/home/user/subdomain/`), sistem otomatis mendeteksi folder induk `/home/user/` agar Anda dapat mengelola seluruh folder `public_html/` website utama Anda!
+- **🖥️ Tampilan cPanel-like Modern** — Responsif, dark/light theme, ikon SVG bersih.
+- **🌓 Dark / Light Theme Toggle** — 1-klik, tersimpan di localStorage.
+- **📊 Disk Usage / Quota Meter** — Indikator real-time kapasitas disk (Hijau/Oranye/Merah).
+- **⚡ Zero Dependencies** — 100% PHP Native, tanpa Composer, Node.js, atau database.
+- **📦 ZIP Extractor & Compressor** — Anti-Zip Slip, conflict handling (Overwrite/Skip/Rename).
+- **🗑️ Recycle Bin / Trash** — Semua delete ke Trash dulu. Restore 1-klik, hapus permanen, kosongkan. Badge counter real-time.
+- **📜 Activity Log Viewer** — Riwayat aktivitas lengkap: upload, rename, edit, trash, extract, dll. Filter per jenis aksi & teks. Status badge berwarna.
+- **🔍 Find in Files** — Cari teks/kode di seluruh berkas, support Regex, 1-klik lompat ke editor.
+- **🌈 In-Browser Code Editor** — Syntax highlighting PHP/JS/HTML/CSS/SQL/Bash, Fullscreen, Word Wrap, Ctrl+S simpan.
+- **⌨️ Keyboard Shortcuts** — F2 Rename, Del Hapus, Ctrl+A Select All, Ctrl+F Cari, Ctrl+Shift+F Find in Files.
+- **📱 Responsive Mobile** — Kartu grid adaptif, long-press context menu (haptic feedback), toolbar scrollable.
+- **📑 1-Click Duplicate** — Gandakan file/folder instan di direktori yang sama.
+- **🚀 Upload Berkas Besar (> 100 MB)** — Multi-file, real-time progress bar.
+- **🔒 Keamanan Kelas Hosting** — Path Traversal protection, Rate Limiter brute-force, CSRF Token, audit log.
+- **⚙️ Admin Settings UI** — Ganti username, password, root dir, batas upload, session timeout dari web.
+- **🌐 Deteksi Cerdas Direktori cPanel** — Auto-deteksi folder induk saat dipasang di subdomain.
 
 ---
 
-## 📋 Persyaratan Server (Server Requirements)
+## 📋 Persyaratan Server
 
-| Komponen | Persyaratan Minimum |
+| Komponen | Minimum |
 |---|---|
-| **PHP** | PHP 7.4, 8.0, 8.1, 8.2, 8.3+ |
-| **Ekstensi PHP** | `ext-zip`, `ext-session`, `ext-json` (standar bawaan hosting) |
+| **PHP** | 7.4 / 8.0 / 8.1 / 8.2 / 8.3+ |
+| **Ekstensi PHP** | `ext-zip`, `ext-session`, `ext-json` |
 | **Web Server** | Apache / LiteSpeed / Nginx / IIS |
-| **Database** | **Tidak membutuhkan database (Zero Database)** |
+| **Database** | ❌ Tidak diperlukan |
 
 ---
 
 ## 🚀 Panduan Pemasangan (Quick Start)
 
-### Cara 1: Menggunakan Git Clone
-```bash
-git clone https://github.com/kazuhamoe/Hosting-File-Manager.git
-cd Hosting-File-Manager
+> ⚠️ **PENTING — Jangan taruh di folder project yang sudah ada!**
+>
+> File Manager ini menggunakan `index.php` sebagai entry point utama. Jika Anda menaruhnya langsung di `public_html/` yang sudah ada `index.php` (WordPress, Laravel, dll.), file project Anda **akan tertimpa dan rusak**.
+>
+> ✅ **Selalu pasang di subfolder khusus atau subdomain terpisah** seperti contoh di bawah ini.
+
+---
+
+### 📁 Opsi A: Subfolder di Hosting *(Paling Mudah)*
+
+```
+public_html/
+├── index.php         ← project utama Anda (TIDAK TERSENTUH)
+├── wp-content/       ← contoh: WordPress / Laravel
+└── filemanager/      ← ✅ extract Hosting File Manager ke SINI
+    ├── index.php
+    ├── config.php
+    ├── app/
+    ├── assets/
+    └── storage/
 ```
 
-### Cara 2: Pemasangan Manual di Hosting / cPanel
-1. Unduh rilis terbaru dalam format ZIP dari tab [Releases](../../releases).
-2. Unggah file ZIP ke direktori subdomain atau folder hosting Anda (misal `public_html/filemanager`).
-3. Ekstrak file arsip tersebut.
-4. Buka alamat website Anda di browser (contoh: `https://domainanda.com/filemanager`).
+**Langkah:**
+1. Download **`hosting-file-manager.zip`** dari tab [**Releases**](../../releases/latest)
+2. Upload ke hosting (FTP / cPanel File Manager)
+3. Extract ke folder `public_html/filemanager/`
+4. Buka browser: `https://domainanda.com/filemanager/`
+5. Ikuti **Setup Wizard** → buat username & password
+
+> 💡 **Tip keamanan:** Gunakan nama folder yang tidak mudah ditebak, misal `/manage-X9K/` atau `/cpanel-tools/`
 
 ---
 
-## 🔑 Autentikasi & Keamanan (Authentication)
+### 🌐 Opsi B: Subdomain Khusus *(Paling Aman & Profesional)*
 
-<p align="center">
-  <img src="screenshots/setup-wizard.png" alt="Setup Administrator Wizard" width="540">
-</p>
+```
+domainanda.com/           ← project utama Anda (TIDAK TERSENTUH)
+manager.domainanda.com/   ← ✅ subdomain khusus untuk File Manager
+```
 
-File Manager ini menerapkan sistem **First-Time Setup Wizard ("Create Password")**:
-- **Setup Akun Pertama Kali:** Saat aplikasi baru diunggah ke server hosting dan dibuka di peramban, Anda akan langsung diarahkan ke form *Setup Administrator* untuk membuat username dan password pilihan Anda sendiri.
-- **Form Login Bersih:** Halaman login tidak menampilkan placeholder atau petunjuk kredensial akun bawaan.
-- **Penyimpanan Terenkripsi:** Password di-hash menggunakan standar industri Bcrypt (`PASSWORD_BCRYPT`) dan disimpan aman di `storage/credentials.json`.
-- **Anti Re-Setup:** Rute inisialisasi akun otomatis dikunci secara permanen setelah akun pertama kali dibuat.
-- **Pengaturan Akun (Settings):** Username dan password dapat diubah sewaktu-waktu dengan aman melalui menu **⚙️ Pengaturan (Settings)** di pojok kanan atas setelah Anda login.
+**Langkah di cPanel:**
+1. Login cPanel → **Subdomains** → buat subdomain, misal `manager.domainanda.com`
+2. Set **Document Root**: `/home/namauser/manager.domainanda.com/`
+3. Upload & extract `hosting-file-manager.zip` ke folder document root tersebut
+4. Akses: `https://manager.domainanda.com/`
+5. Ikuti **Setup Wizard**
+
+**Keunggulan subdomain:**
+- ✅ Nol risiko bentrok dengan project lain
+- ✅ SSL terpisah
+- ✅ Mudah dinonaktifkan kapan saja
+- ✅ URL yang mudah diingat
 
 ---
 
-## ⚙️ Konfigurasi (`config.php` & Modal Pengaturan UI)
+### 🖥️ Opsi C: Lokal XAMPP / Laragon *(Development)*
 
-Seluruh pengaturan sistem kini dapat disesuaikan langsung melalui antarmuka web pada **Modal Pengaturan (⚙️ Pengaturan)** atau secara manual pada berkas `config.php`:
+```
+C:\xampp\htdocs\
+├── myproject\        ← project Anda
+└── filemanager\      ← ✅ extract di sini
+```
+
+Akses: `http://localhost/filemanager/`
+
+---
+
+### ⚡ Opsi D: Git Clone *(Developer)*
+
+```bash
+git clone https://github.com/kazuhamoe/Hosting-File-Manager.git filemanager
+# Akses: http://localhost/filemanager/
+```
+
+---
+
+## 🔑 Autentikasi & Keamanan
+
+File Manager menerapkan **First-Time Setup Wizard**:
+- Saat pertama dibuka, langsung ke form *Setup Administrator* untuk buat akun
+- Password di-hash dengan **Bcrypt** (`PASSWORD_BCRYPT`), disimpan di `storage/credentials.json`
+- **Anti Re-Setup** — dikunci permanen setelah akun dibuat
+- Rate Limiter proteksi brute-force login
+- CSRF Token di semua operasi write
+
+---
+
+## ⚙️ Konfigurasi (`config.php`)
 
 ```php
-// Batas direktori yang boleh diakses (Security Boundary)
-// Mengizinkan pengelolaan hingga root public_html / home hosting
-define('ALLOWED_ROOT', dirname(__DIR__)); 
-
-// Masa aktif sesi (detik) - default 30 hari (Stay Logged In)
-define('SESSION_TIMEOUT', 2592000);
-
-// Batas maksimal upload file (dalam bytes, contoh 200 MB)
-define('MAX_UPLOAD_SIZE', 200 * 1024 * 1024);
-
-// Tampilkan indikator kuota disk cPanel (default false untuk shared hosting)
-define('SHOW_DISK_USAGE', false);
-
-// Hash password fallback (dikosongkan secara default untuk mengaktifkan wizard pembuatan akun)
-define('AUTH_PASS_HASH', '');
+define('ALLOWED_ROOT', dirname(__DIR__));    // Batas direktori yang boleh diakses
+define('SESSION_TIMEOUT', 2592000);          // Masa sesi (detik) — default 30 hari
+define('MAX_UPLOAD_SIZE', 200 * 1024 * 1024); // Batas upload (200 MB)
+define('SHOW_DISK_USAGE', false);            // Tampilkan quota disk
+define('AUTH_PASS_HASH', '');                // Kosong = aktifkan Setup Wizard
 ```
 
-> 💡 **Tip:** Pengaturan yang disimpan melalui antarmuka web (UI) otomatis disimpan ke `storage/settings.json` sehingga tidak akan hilang atau ter-reset meskipun Anda memperbarui versi file manager di masa mendatang.
+> 💡 Pengaturan via UI web disimpan ke `storage/settings.json` — tidak akan hilang saat update.
 
 ---
 
@@ -118,33 +155,48 @@ define('AUTH_PASS_HASH', '');
 
 ```
 ├── app/                  # Logika inti PHP (Auth, FileManager, Security, ZipManager, Logger)
-│   └── index.php         # Proteksi direct web access (403 Forbidden)
 ├── assets/
-│   ├── css/style.css     # Antarmuka cPanel profesional (Responsive)
-│   └── js/app.js         # Frontend engine (Ajax, multi-upload, context menu, editor)
-├── storage/              # Direktori data aman (terproteksi .htaccess & index.php)
-│   ├── logs/             # Catatan audit aktivitas
-│   └── temp/             # Temporary files & session data
-├── index.php             # Single entry point aplikasi
-├── config.php            # File konfigurasi utama
-├── updater.php           # Script standalone 1-klik untuk update di hosting
-├── LICENSE               # Lisensi MIT
-└── README.md             # Dokumentasi proyek
+│   ├── css/style.css     # Antarmuka responsif
+│   └── js/app.js         # Frontend engine (AJAX, upload, editor, context menu)
+├── storage/
+│   ├── logs/audit.log    # Catatan audit aktivitas
+│   ├── trash/            # 🗑️ Recycle Bin — file terhapus disimpan di sini
+│   └── temp/             # File sementara
+├── index.php             # Entry point aplikasi
+├── config.php            # Konfigurasi utama
+└── updater.php           # Script update 1-klik
 ```
 
 ---
 
-## 🤝 Kontribusi (Contributing)
+## 📦 Riwayat Rilis (Changelog)
 
-Kontribusi terbuka untuk siapa saja!
+### 🎉 v2.0.0 — 12 September 2026
+- ✅ **Recycle Bin / Trash** — soft delete, restore 1-klik, badge counter, kosongkan semua
+- ✅ **Activity Log Viewer** — riwayat aktivitas, filter teks & aksi, status badge berwarna, hapus log
+- ✅ **Mobile UI/UX** — grid card, long-press context menu (haptic), toolbar scrollable, editor fullscreen
+- ✅ **Find in Files** — pencarian kode di seluruh berkas, Regex support, lompat ke editor
+- ✅ **Keyboard Shortcuts** — F2, Del, Ctrl+A, Ctrl+F, Ctrl+Shift+F, Esc
+- ✅ **Config Settings Manager** — semua setting bisa diubah dari UI web
+- ✅ **Grid View Mode** — tampilan kartu alternatif selain tabel
+- ✅ **Auto Permission 0777** — upload/extract otomatis set permission
+- ✅ 75 automated test assertions
+
+### v1.0.0 — Rilis awal
+- File manager dasar: upload, download, rename, delete, ZIP, code editor, dark mode
+
+---
+
+## 🤝 Kontribusi
+
 1. **Fork** repositori ini
-2. Buat branch fitur baru (`git checkout -b fitur-keren`)
-3. Commit perubahan Anda (`git commit -m 'Menambahkan fitur keren'`)
-4. Push ke branch Anda (`git push origin fitur-keren`)
+2. Buat branch fitur (`git checkout -b fitur-baru`)
+3. Commit (`git commit -m 'feat: tambah fitur baru'`)
+4. Push (`git push origin fitur-baru`)
 5. Buat **Pull Request**
 
 ---
 
-## 📄 Lisensi (License)
+## 📄 Lisensi
 
-Proyek ini dirilis di bawah lisensi open source [MIT License](LICENSE). Siapapun bebas menggunakan, memodifikasi, dan mendistribusikan proyek ini untuk kebutuhan pribadi maupun komersial.
+[MIT License](LICENSE) — bebas digunakan, dimodifikasi, dan didistribusikan untuk keperluan pribadi maupun komersial.
