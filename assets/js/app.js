@@ -25,12 +25,21 @@
         editorOriginalContent: '',
         compressItems: [],
         theme: 'light',
+        viewMode: localStorage.getItem('hfm_view_mode') || 'list',
         editorHighlight: localStorage.getItem('hfm_editor_highlight') !== '0',
         editorLang: 'auto'
     };
 
     // DOM Elements Cache
     const elements = {
+        fileTableContainer: document.getElementById('fileTableContainer'),
+        fileGridContainer: document.getElementById('fileGridContainer'),
+        fileGrid: document.getElementById('fileGrid'),
+        btnViewModeToggle: document.getElementById('btnViewModeToggle'),
+        svgViewList: document.getElementById('svgViewList'),
+        svgViewGrid: document.getElementById('svgViewGrid'),
+        txtViewMode: document.getElementById('txtViewMode'),
+        btnFindInFiles: document.getElementById('btnFindInFiles'),
         tableBody: document.getElementById('fileTableBody'),
         breadcrumbs: document.getElementById('breadcrumbsContainer'),
         searchInput: document.getElementById('searchInput'),
@@ -79,6 +88,19 @@
         modalCompress: document.getElementById('modalCompress'),
         modalChmod: document.getElementById('modalChmod'),
         modalSettings: document.getElementById('modalSettings'),
+        modalFindInFiles: document.getElementById('modalFindInFiles'),
+        formFindInFiles: document.getElementById('formFindInFiles'),
+        findQueryInput: document.getElementById('findQueryInput'),
+        findIncludeSubdirs: document.getElementById('findIncludeSubdirs'),
+        findCaseSensitive: document.getElementById('findCaseSensitive'),
+        findIsRegex: document.getElementById('findIsRegex'),
+        btnRunFind: document.getElementById('btnRunFind'),
+        findStatusAlert: document.getElementById('findStatusAlert'),
+        findResultsContainer: document.getElementById('findResultsContainer'),
+        findResultsSummary: document.getElementById('findResultsSummary'),
+        findScannedSummary: document.getElementById('findScannedSummary'),
+        findResultsList: document.getElementById('findResultsList'),
+        findCurrentScopeHint: document.getElementById('findCurrentScopeHint'),
         btnOpenSettings: document.getElementById('btnOpenSettings'),
         headerUserBadge: document.getElementById('headerUserBadge'),
         contextMenu: document.getElementById('contextMenu'),
@@ -251,7 +273,7 @@
             }
         });
 
-        // Keyboard shortcuts: ESC to close modals / context menu
+        // Desktop Keyboard Shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (elements.contextMenu && elements.contextMenu.style.display !== 'none') {
@@ -264,8 +286,71 @@
                 }
                 closeActiveModals();
                 closeAllDropdowns();
+                return;
+            }
+
+            const target = e.target;
+            const isTyping = target && (
+                target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.tagName === 'SELECT' ||
+                target.isContentEditable
+            );
+
+            // Ctrl + Shift + F: Find in Files (Global)
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+                e.preventDefault();
+                openFindInFilesModal();
+                return;
+            }
+
+            // Do not intercept if user is typing in form inputs/textarea
+            if (isTyping) {
+                return;
+            }
+
+            // Ctrl + F: Quick focus search input
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'f') {
+                e.preventDefault();
+                if (elements.searchInput) {
+                    elements.searchInput.focus();
+                    elements.searchInput.select();
+                }
+                return;
+            }
+
+            // Ctrl + A: Select All in current directory
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+                e.preventDefault();
+                if (elements.selectAllCheckbox) {
+                    elements.selectAllCheckbox.checked = true;
+                    elements.selectAllCheckbox.dispatchEvent(new Event('change'));
+                }
+                return;
+            }
+
+            // F2: Rename single selected item
+            if (e.key === 'F2') {
+                e.preventDefault();
+                handleRenameSelected();
+                return;
+            }
+
+            // Delete: Delete selected items
+            if (e.key === 'Delete') {
+                e.preventDefault();
+                handleDeleteSelected();
+                return;
             }
         });
+
+        // View Mode Toggle (List / Grid)
+        elements.btnViewModeToggle?.addEventListener('click', toggleViewMode);
+        initViewMode();
+
+        // Find in Files
+        elements.btnFindInFiles?.addEventListener('click', openFindInFilesModal);
+        document.getElementById('formFindInFiles')?.addEventListener('submit', handleFindInFilesSubmit);
 
         // Form Submit Handlers
         document.getElementById('formNewFolder')?.addEventListener('submit', handleNewFolder);
@@ -472,7 +557,63 @@
         return `<svg class="item-icon icon-file" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
     }
 
+    function createEmptyStateHtml() {
+        return `
+            <div class="empty-state-card">
+                <div class="empty-state-icon-wrap">
+                    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                    </svg>
+                </div>
+                <h4 class="empty-state-title">Direktori Ini Masih Kosong</h4>
+                <p class="empty-state-desc">Belum ada berkas atau direktori di lokasi ini. Mulai kelola berkas Anda dengan memilih salah satu aksi cepat di bawah:</p>
+                <div class="empty-quick-actions">
+                    <button type="button" class="btn btn-primary empty-quick-btn" id="emptyBtnUpload">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="12" x2="12" y2="15"/></svg>
+                        <span>Unggah Berkas</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary empty-quick-btn" id="emptyBtnFolder">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                        <span>Folder Baru</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary empty-quick-btn" id="emptyBtnFile">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span>Berkas Baru</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function bindEmptyStateEvents(container) {
+        if (!container) return;
+        container.querySelector('#emptyBtnUpload')?.addEventListener('click', () => {
+            const display = document.getElementById('uploadTargetDirDisplay');
+            if (display) display.textContent = state.currentPath;
+            clearUploadQueue();
+            loadUploadLimitsDiagnostic();
+            openModal(elements.modalUpload);
+        });
+        container.querySelector('#emptyBtnFolder')?.addEventListener('click', () => {
+            const display = document.getElementById('createFolderTargetDisplay');
+            if (display) display.textContent = state.currentPath;
+            openModal(elements.modalFolder);
+            setTimeout(() => document.getElementById('inputFolderName')?.focus(), 50);
+        });
+        container.querySelector('#emptyBtnFile')?.addEventListener('click', () => {
+            const display = document.getElementById('createFileTargetDisplay');
+            if (display) display.textContent = state.currentPath;
+            openModal(elements.modalFile);
+            setTimeout(() => document.getElementById('inputFileName')?.focus(), 50);
+        });
+    }
+
     function renderTable(items) {
+        if (state.viewMode === 'grid') {
+            renderGrid(items);
+            return;
+        }
+
         if (!elements.tableBody) return;
         elements.tableBody.innerHTML = '';
 
@@ -485,14 +626,11 @@
             elements.tableBody.innerHTML = `
                 <tr>
                     <td colspan="7">
-                        <div class="empty-state">
-                            <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-                            <p class="empty-state-title">Direktori ini kosong</p>
-                            <p class="empty-state-subtitle">Unggah berkas atau buat folder baru untuk memulai.</p>
-                        </div>
+                        ${createEmptyStateHtml()}
                     </td>
                 </tr>
             `;
+            bindEmptyStateEvents(elements.tableBody);
             return;
         }
 
@@ -706,21 +844,374 @@
     }
 
     // --------------------------------------------------------------------------
+    // Grid View (Card & Live Thumbnail Mode)
+    // --------------------------------------------------------------------------
+    function initViewMode() {
+        setViewMode(state.viewMode, false);
+    }
+
+    function setViewMode(mode, reRender = true) {
+        state.viewMode = mode === 'grid' ? 'grid' : 'list';
+        localStorage.setItem('hfm_view_mode', state.viewMode);
+
+        const isGrid = (state.viewMode === 'grid');
+        if (elements.fileTableContainer) {
+            elements.fileTableContainer.style.display = isGrid ? 'none' : 'block';
+        }
+        if (elements.fileGridContainer) {
+            elements.fileGridContainer.style.display = isGrid ? 'block' : 'none';
+        }
+        if (elements.svgViewList) {
+            elements.svgViewList.style.display = isGrid ? 'block' : 'none';
+        }
+        if (elements.svgViewGrid) {
+            elements.svgViewGrid.style.display = isGrid ? 'none' : 'block';
+        }
+        if (elements.txtViewMode) {
+            elements.txtViewMode.textContent = isGrid ? 'List' : 'Grid';
+        }
+        if (elements.btnViewModeToggle) {
+            elements.btnViewModeToggle.title = isGrid 
+                ? 'Beralih ke Tampilan Tabel (List View)' 
+                : 'Beralih ke Tampilan Thumbnail (Grid View)';
+        }
+
+        if (reRender) {
+            const query = (elements.searchInput?.value || '').toLowerCase().trim();
+            if (query) {
+                const filtered = state.items.filter(item => item.name.toLowerCase().includes(query));
+                renderTable(filtered);
+            } else {
+                renderTable(state.items);
+            }
+        }
+    }
+
+    function toggleViewMode() {
+        const nextMode = state.viewMode === 'grid' ? 'list' : 'grid';
+        setViewMode(nextMode, true);
+    }
+
+    function renderGrid(items) {
+        if (!elements.fileGrid) return;
+        elements.fileGrid.innerHTML = '';
+
+        if (elements.selectAllCheckbox) {
+            elements.selectAllCheckbox.checked = false;
+            elements.selectAllCheckbox.indeterminate = false;
+        }
+
+        if (items.length === 0) {
+            elements.fileGrid.innerHTML = createEmptyStateHtml();
+            bindEmptyStateEvents(elements.fileGrid);
+            return;
+        }
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'grid-card';
+            card.setAttribute('data-path', item.virtual_path);
+            card.setAttribute('data-dir', item.is_dir ? '1' : '0');
+            if (item.is_hidden) card.classList.add('is-hidden-item');
+            if (state.selectedPaths.has(item.virtual_path)) card.classList.add('selected');
+
+            const isChecked = state.selectedPaths.has(item.virtual_path);
+            const badgeProtected = item.is_protected ? `<span class="grid-badge-protected">PROTECTED</span>` : '';
+
+            // Thumbnail or Icon
+            let thumbHtml = '';
+            if (item.is_image) {
+                const thumbUrl = `?action=thumb&path=${encodeURIComponent(item.virtual_path)}`;
+                thumbHtml = `
+                    <div class="grid-card-thumb">
+                        <img src="${thumbUrl}" class="grid-thumb-img" alt="${escapeHtml(item.name)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'grid-card-icon\\'>${escapeHtml(getFileIconSvg(item)).replace(/"/g, '&quot;')}</div>';">
+                    </div>
+                `;
+            } else {
+                thumbHtml = `
+                    <div class="grid-card-thumb">
+                        <div class="grid-card-icon">${getFileIconSvg(item)}</div>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="grid-card-select">
+                    <input type="checkbox" class="row-checkbox" data-path="${escapeHtml(item.virtual_path)}" ${isChecked ? 'checked' : ''}>
+                </div>
+                <div class="grid-card-actions">
+                    <div class="action-dropdown">
+                        <button type="button" class="btn-icon btn-action-trigger" title="Action Menu">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                        </button>
+                        <div class="dropdown-menu">
+                            ${buildActionMenuItems(item)}
+                        </div>
+                    </div>
+                </div>
+                ${thumbHtml}
+                <div class="grid-card-title" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+                <div class="grid-card-meta">
+                    <span>${item.is_dir ? 'Folder' : escapeHtml(item.size_human)}</span>
+                    ${badgeProtected}
+                </div>
+            `;
+
+            // Row checkbox toggle
+            const checkbox = card.querySelector('.row-checkbox');
+            checkbox.addEventListener('change', (e) => {
+                e.stopPropagation();
+                if (checkbox.checked) {
+                    state.selectedPaths.add(item.virtual_path);
+                    card.classList.add('selected');
+                } else {
+                    state.selectedPaths.delete(item.virtual_path);
+                    card.classList.remove('selected');
+                }
+                updateSelectionUI();
+            });
+
+            // Card single-click: select/toggle
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.row-checkbox') || e.target.closest('.action-dropdown')) {
+                    return;
+                }
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+            });
+
+            // Card double-click: open / edit / preview
+            card.addEventListener('dblclick', (e) => {
+                if (e.target.closest('.row-checkbox') || e.target.closest('.action-dropdown')) {
+                    return;
+                }
+                if (item.is_dir) {
+                    loadDirectory(item.virtual_path);
+                } else if (item.is_editable) {
+                    openEditorModal(item.virtual_path);
+                } else if (item.is_text) {
+                    openPreviewModal(item.virtual_path);
+                } else if (item.is_image) {
+                    window.open(`?action=thumb&path=${encodeURIComponent(item.virtual_path)}`, '_blank');
+                }
+            });
+
+            // Right-click context menu
+            card.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!state.selectedPaths.has(item.virtual_path)) {
+                    state.selectedPaths.clear();
+                    state.selectedPaths.add(item.virtual_path);
+                    document.querySelectorAll('.grid-card.selected, .file-table tr.selected').forEach(r => r.classList.remove('selected'));
+                    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+                    card.classList.add('selected');
+                    checkbox.checked = true;
+                    updateSelectionUI();
+                }
+                showContextMenu(e.clientX, e.clientY, item);
+            });
+
+            // Action dropdown toggle
+            const trigger = card.querySelector('.btn-action-trigger');
+            const dropdown = card.querySelector('.dropdown-menu');
+            trigger?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isShown = dropdown.classList.contains('show');
+                closeAllDropdowns();
+                if (!isShown) dropdown.classList.add('show');
+            });
+
+            dropdown?.querySelectorAll('[data-action]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    closeAllDropdowns();
+                    handleActionClick(btn.getAttribute('data-action'), item);
+                });
+            });
+
+            elements.fileGrid.appendChild(card);
+        });
+    }
+
+    // --------------------------------------------------------------------------
+    // Find in Files (Pencarian Teks di Dalam Berkas)
+    // --------------------------------------------------------------------------
+    function openFindInFilesModal() {
+        if (!elements.modalFindInFiles) return;
+        if (elements.findCurrentScopeHint) {
+            elements.findCurrentScopeHint.innerHTML = `Direktori: <code>${escapeHtml(state.currentPath)}</code>`;
+        }
+        if (elements.findStatusAlert) {
+            elements.findStatusAlert.style.display = 'none';
+            elements.findStatusAlert.className = 'alert';
+            elements.findStatusAlert.textContent = '';
+        }
+        if (elements.findResultsContainer) {
+            elements.findResultsContainer.style.display = 'none';
+        }
+        if (elements.findResultsList) {
+            elements.findResultsList.innerHTML = '';
+        }
+
+        openModal(elements.modalFindInFiles);
+        setTimeout(() => {
+            elements.findQueryInput?.focus();
+            elements.findQueryInput?.select();
+        }, 50);
+    }
+
+    async function handleFindInFilesSubmit(e) {
+        if (e && e.preventDefault) e.preventDefault();
+
+        const query = (elements.findQueryInput?.value || '').trim();
+        if (!query) {
+            showFindAlert('Silakan masukkan kata kunci pencarian.', 'warning');
+            return;
+        }
+
+        const includeSubdirs = elements.findIncludeSubdirs?.checked ?? true;
+        const caseSensitive = elements.findCaseSensitive?.checked ?? false;
+        const isRegex = elements.findIsRegex?.checked ?? false;
+
+        if (elements.btnRunFind) {
+            elements.btnRunFind.disabled = true;
+            elements.btnRunFind.innerHTML = `
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin-icon" style="margin-right: 4px; vertical-align: middle;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <span>Mencari...</span>
+            `;
+        }
+
+        if (elements.findStatusAlert) {
+            elements.findStatusAlert.style.display = 'none';
+        }
+        if (elements.findResultsContainer) {
+            elements.findResultsContainer.style.display = 'none';
+        }
+        if (elements.findResultsList) {
+            elements.findResultsList.innerHTML = '';
+        }
+
+        try {
+            const url = `?action=find_in_files&path=${encodeURIComponent(state.currentPath)}&query=${encodeURIComponent(query)}&include_subdirs=${includeSubdirs ? 1 : 0}&case_sensitive=${caseSensitive ? 1 : 0}&is_regex=${isRegex ? 1 : 0}&csrf_token=${encodeURIComponent(state.csrfToken)}`;
+            const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const data = await res.json();
+
+            if (!data.success) {
+                showFindAlert(data.message || 'Gagal melakukan pencarian berkas.', 'danger');
+                return;
+            }
+
+            renderFindResults(data, query, isRegex, caseSensitive);
+        } catch (err) {
+            showFindAlert('Terjadi kesalahan jaringan atau server saat mencari: ' + err.message, 'danger');
+        } finally {
+            if (elements.btnRunFind) {
+                elements.btnRunFind.disabled = false;
+                elements.btnRunFind.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: middle;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <span>Cari</span>
+                `;
+            }
+        }
+    }
+
+    function showFindAlert(msg, type = 'info') {
+        if (!elements.findStatusAlert) return;
+        elements.findStatusAlert.className = `alert alert-${type}`;
+        elements.findStatusAlert.textContent = msg;
+        elements.findStatusAlert.style.display = 'block';
+    }
+
+    function renderFindResults(data, query, isRegex, caseSensitive) {
+        if (!elements.findResultsContainer || !elements.findResultsList) return;
+
+        const matches = data.matches || [];
+        const total = matches.length;
+        const scanned = data.scanned_files || 0;
+
+        if (elements.findResultsSummary) {
+            elements.findResultsSummary.innerHTML = `<strong>${total}</strong> kecocokan ditemukan ${data.limit_reached ? '(dibatasi maks 100)' : ''}`;
+        }
+        if (elements.findScannedSummary) {
+            elements.findScannedSummary.textContent = `${scanned} berkas teks dipindai`;
+        }
+
+        elements.findResultsList.innerHTML = '';
+
+        if (total === 0) {
+            elements.findResultsList.innerHTML = `
+                <div style="padding: 24px; text-align: center; color: var(--text-muted, #64748b); font-size: 13px;">
+                    Tidak ada teks yang cocok dengan kata kunci "<strong>${escapeHtml(query)}</strong>" dalam direktori ini.
+                </div>
+            `;
+            elements.findResultsContainer.style.display = 'block';
+            return;
+        }
+
+        matches.forEach(m => {
+            const itemEl = document.createElement('div');
+            itemEl.className = 'find-result-item';
+
+            // Highlight matched query in snippet
+            let highlightedSnippet = escapeHtml(m.snippet);
+            try {
+                if (isRegex) {
+                    const flags = caseSensitive ? 'g' : 'gi';
+                    const reg = new RegExp('(' + query + ')', flags);
+                    highlightedSnippet = highlightedSnippet.replace(reg, '<mark class="find-highlight">$1</mark>');
+                } else {
+                    const flags = caseSensitive ? 'g' : 'gi';
+                    const escapedQ = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const reg = new RegExp('(' + escapedQ + ')', flags);
+                    highlightedSnippet = highlightedSnippet.replace(reg, '<mark class="find-highlight">$1</mark>');
+                }
+            } catch (e) {
+                // Fallback to unhighlighted snippet
+            }
+
+            itemEl.innerHTML = `
+                <div class="find-result-meta">
+                    <span class="find-result-file">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span>${escapeHtml(m.virtual_path)}</span>
+                    </span>
+                    <span class="find-result-line">Baris ${m.line_number}</span>
+                </div>
+                <div class="find-result-snippet">${highlightedSnippet}</div>
+            `;
+
+            // Click result to open in code editor at that line
+            itemEl.addEventListener('click', () => {
+                closeActiveModals();
+                openEditorModal(m.virtual_path, m.line_number);
+            });
+
+            elements.findResultsList.appendChild(itemEl);
+        });
+
+        elements.findResultsContainer.style.display = 'block';
+    }
+
+    // --------------------------------------------------------------------------
     // Multi-Select & Selection UI State
     // --------------------------------------------------------------------------
     function handleSelectAll(e) {
         const isChecked = e.target.checked;
         state.selectedPaths.clear();
 
-        document.querySelectorAll('.row-checkbox').forEach(cb => {
+        document.querySelectorAll('.file-table tbody .row-checkbox, .file-grid .row-checkbox').forEach(cb => {
             cb.checked = isChecked;
             const path = cb.getAttribute('data-path');
             const tr = cb.closest('tr');
+            const card = cb.closest('.grid-card');
             if (isChecked && path) {
                 state.selectedPaths.add(path);
                 tr?.classList.add('selected');
+                card?.classList.add('selected');
             } else {
                 tr?.classList.remove('selected');
+                card?.classList.remove('selected');
             }
         });
 
@@ -769,6 +1260,15 @@
         if (elements.btnChmodSelected) {
             elements.btnChmodSelected.disabled = !(count === 1 && singleItem && !singleItem.is_protected);
         }
+
+        // Sync grid card selection state
+        document.querySelectorAll('.file-grid .grid-card').forEach(card => {
+            const p = card.getAttribute('data-path');
+            const isSel = state.selectedPaths.has(p);
+            card.classList.toggle('selected', isSel);
+            const cb = card.querySelector('.row-checkbox');
+            if (cb) cb.checked = isSel;
+        });
 
         // Status Bar
         if (elements.statusTotalItems) elements.statusTotalItems.textContent = `${total} item`;
@@ -1017,7 +1517,7 @@
         if (elements.editorStatChars) elements.editorStatChars.textContent = `Karakter: ${chars}`;
     }
 
-    async function openEditorModal(virtualPath) {
+    async function openEditorModal(virtualPath, targetLine = null) {
         if (!elements.modalEditor) return;
 
         if (elements.editorFilePath) elements.editorFilePath.value = virtualPath;
@@ -1047,6 +1547,21 @@
             updateEditorStats();
             syncEditorHighlight();
             elements.editorContent.focus();
+
+            if (targetLine && typeof targetLine === 'number' && targetLine > 0) {
+                const lines = data.content.split('\n');
+                let charOffset = 0;
+                for (let i = 0; i < Math.min(targetLine - 1, lines.length); i++) {
+                    charOffset += lines[i].length + 1;
+                }
+                const lineLen = lines[targetLine - 1] ? lines[targetLine - 1].length : 0;
+                elements.editorContent.setSelectionRange(charOffset, charOffset + lineLen);
+                const lineHeight = 19;
+                elements.editorContent.scrollTop = Math.max(0, (targetLine - 4) * lineHeight);
+                if (elements.editorPre) {
+                    elements.editorPre.scrollTop = elements.editorContent.scrollTop;
+                }
+            }
         }
 
         if (data.size > 1024 * 1024 && elements.editorWarningBox) {

@@ -331,6 +331,13 @@ if ($action === 'download') {
     exit;
 }
 
+// Pratinjau Gambar Langsung / Thumbnail (Grid View & Image Preview)
+if ($action === 'thumb') {
+    $filePath = $_GET['path'] ?? '';
+    FileManager::serveThumbnail($filePath);
+    exit;
+}
+
 // Download Folder sebagai ZIP
 if ($action === 'download_folder') {
     $folderPath = $_GET['path'] ?? '';
@@ -706,6 +713,15 @@ if (!empty($action)) {
             $path = $_GET['path'] ?? '';
             jsonResponse(FileManager::getFolderStats($path));
 
+        case 'find_in_files':
+            $path = $_REQUEST['path'] ?? '/';
+            $query = (string)($_REQUEST['query'] ?? '');
+            $includeSubdirs = !isset($_REQUEST['include_subdirs']) || $_REQUEST['include_subdirs'] === '1' || $_REQUEST['include_subdirs'] === 'true';
+            $caseSensitive = isset($_REQUEST['case_sensitive']) && ($_REQUEST['case_sensitive'] === '1' || $_REQUEST['case_sensitive'] === 'true');
+            $isRegex = isset($_REQUEST['is_regex']) && ($_REQUEST['is_regex'] === '1' || $_REQUEST['is_regex'] === 'true');
+            $maxResults = isset($_REQUEST['max_results']) ? (int)$_REQUEST['max_results'] : 100;
+            jsonResponse(FileManager::findInFiles($path, $query, $includeSubdirs, $caseSensitive, $isRegex, $maxResults));
+
         case 'info':
             $path = $_GET['path'] ?? '';
             jsonResponse(FileManager::getItemInfo($path));
@@ -887,6 +903,17 @@ if (!empty($action)) {
                     <svg class="btn-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     <span>Hidden</span>
                 </button>
+
+                <button id="btnFindInFiles" class="btn btn-secondary btn-sm btn-find-code" title="Cari Teks / Kode di Seluruh Berkas (Ctrl+Shift+F)">
+                    <svg class="btn-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M8 11h6"/><path d="M11 8v6"/></svg>
+                    <span>Cari Teks</span>
+                </button>
+
+                <button id="btnViewModeToggle" class="btn btn-secondary btn-sm btn-view-toggle" title="Ganti Tampilan (List / Grid View)">
+                    <svg id="svgViewList" class="btn-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    <svg id="svgViewGrid" class="btn-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    <span id="txtViewMode">Grid</span>
+                </button>
             </div>
             
             <div class="toolbar-search">
@@ -907,9 +934,9 @@ if (!empty($action)) {
             </nav>
         </div>
 
-        <!-- Main Content Table -->
+        <!-- Main Content Table & Grid -->
         <main class="app-main">
-            <div class="file-table-container">
+            <div class="file-table-container" id="fileTableContainer">
                 <table class="file-table" id="fileTable">
                     <thead>
                         <tr>
@@ -928,6 +955,13 @@ if (!empty($action)) {
                         <!-- Diisi secara dinamis oleh app.js -->
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Grid View Container (Thumbnail Cards) -->
+            <div class="file-grid-container" id="fileGridContainer" style="display: none;">
+                <div class="file-grid" id="fileGrid">
+                    <!-- Diisi secara dinamis oleh app.js saat mode grid aktif -->
+                </div>
             </div>
 
             <!-- Status Bar Bawah -->
@@ -1394,6 +1428,65 @@ if (!empty($action)) {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-modal-cancel">Batal</button>
                     <button type="submit" class="btn btn-primary" id="btnSubmitChmod">Ubah Hak Akses</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Find in Files (Pencarian Teks / Kode) -->
+    <div class="modal-backdrop" id="modalFindInFiles">
+        <div class="modal-box modal-lg" style="max-width: 720px;">
+            <form id="formFindInFiles">
+                <div class="modal-header">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #0284c7;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M8 11h6"/><path d="M11 8v6"/></svg>
+                        <h3 style="margin: 0; font-size: 15px;">Cari Teks di Dalam Berkas (Find in Files)</h3>
+                    </div>
+                    <button type="button" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label for="findQueryInput" style="font-weight: 600; font-size: 12.5px; margin-bottom: 6px; display: block;">Kata Kunci / Pola Pencarian:</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="findQueryInput" class="form-control" required placeholder="Ketik teks, nama fungsi, variabel, atau ekspresi regex..." autocomplete="off" style="font-family: monospace;">
+                            <button type="submit" class="btn btn-primary" id="btnRunFind" style="white-space: nowrap; padding: 6px 16px;">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: middle;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                <span>Cari</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="find-options-bar">
+                        <label class="find-opt-label">
+                            <input type="checkbox" id="findIncludeSubdirs" checked>
+                            <span>Cari ke Subfolder (Rekursif)</span>
+                        </label>
+                        <label class="find-opt-label">
+                            <input type="checkbox" id="findCaseSensitive">
+                            <span>Case Sensitive</span>
+                        </label>
+                        <label class="find-opt-label">
+                            <input type="checkbox" id="findIsRegex">
+                            <span>Regex</span>
+                        </label>
+                        <span class="find-scope-hint" id="findCurrentScopeHint">Direktori: <code>/</code></span>
+                    </div>
+
+                    <div id="findStatusAlert" class="alert" style="display: none; margin-top: 12px; margin-bottom: 12px; font-size: 12.5px;"></div>
+
+                    <!-- Hasil Pencarian -->
+                    <div id="findResultsContainer" style="display: none; margin-top: 14px;">
+                        <div class="find-results-header">
+                            <span id="findResultsSummary"><strong>0</strong> hasil ditemukan</span>
+                            <span id="findScannedSummary">0 berkas dipindai</span>
+                        </div>
+                        <div class="find-results-list" id="findResultsList">
+                            <!-- Diisi secara dinamis oleh JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-modal-cancel">Tutup</button>
                 </div>
             </form>
         </div>

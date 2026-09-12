@@ -65,6 +65,7 @@ class FileManager
 
             $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
             $isZip = !$isDir && ($ext === 'zip');
+            $isImage = !$isDir && in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico', 'bmp'], true);
             $isText = !$isDir && Security::isTextPreviewable($file);
 
             // Klasifikasi tipe file
@@ -99,6 +100,7 @@ class FileManager
                 'virtual_path' => $itemVirtualPath,
                 'is_dir'       => $isDir,
                 'is_zip'       => $isZip,
+                'is_image'     => $isImage,
                 'is_text'      => $isText,
                 'is_hidden'    => $isHidden,
                 'is_editable'  => !$isDir && $isText,
@@ -934,6 +936,59 @@ class FileManager
     }
 
     /**
+     * Menyajikan pratinjau gambar (thumbnail) langsung dengan Content-Type yang sesuai dan caching.
+     */
+    public static function serveThumbnail(string $relativePath): void
+    {
+        $realPath = Security::resolvePath($relativePath, true);
+        if ($realPath === null || is_dir($realPath) || !is_file($realPath)) {
+            http_response_code(404);
+            exit('File tidak ditemukan.');
+        }
+
+        $ext = strtolower(pathinfo($realPath, PATHINFO_EXTENSION));
+        $allowedImages = [
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',
+            'gif'  => 'image/gif',
+            'webp' => 'image/webp',
+            'svg'  => 'image/svg+xml',
+            'ico'  => 'image/x-icon',
+            'bmp'  => 'image/bmp'
+        ];
+
+        if (!isset($allowedImages[$ext])) {
+            http_response_code(415);
+            exit('Bukan berkas gambar yang didukung.');
+        }
+
+        $mime = $allowedImages[$ext];
+        $filesize = filesize($realPath);
+        $mtime = filemtime($realPath);
+        $etag = '"' . md5($realPath . $mtime . $filesize) . '"';
+
+        if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && trim($_SERVER['HTTP_IF_NONE_MATCH']) === $etag) {
+            http_response_code(304);
+            exit;
+        }
+
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . $filesize);
+        header('Content-Disposition: inline; filename="' . addslashes(basename($realPath)) . '"');
+        header('ETag: ' . $etag);
+        header('Cache-Control: public, max-age=86400');
+        header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $mtime) . ' GMT');
+
+        readfile($realPath);
+        exit;
+    }
+
+    /**
      * Mengemas folder menjadi ZIP temporary, mengirimkannya ke browser, lalu membersihkan file temporary.
      */
     public static function downloadFolderAsZip(string $relativePath): void
@@ -1347,5 +1402,132 @@ class FileManager
 
         @unlink($zipTempFile);
         exit;
+    }
+
+    /**
+     * Mencari string teks / regex di dalam seluruh berkas teks di direktori yang ditentukan.
+     */
+    public static function findInFiles(
+        string $path,
+        string $query,
+        bool $includeSubdirs = true,
+        bool $caseSensitive = false,
+        bool $isRegex = false,
+        int $maxResults = 100
+    ): array {
+        $query = trim($query);
+        if ($query === '') {
+            return ['success' => false, 'message' => 'Kata kunci pencarian tidak boleh kosong.', 'matches' => []];
+        }
+
+        if ($isRegex) {
+            $testRegex = '/' . str_replace('/', '\/', $query) . '/' . ($caseSensitive ? '' : 'i');
+            if (@preg_match($testRegex, '') === false) {
+                return ['success' => false, 'message' => 'Pola Regular Expression tidak valid.', 'matches' => []];
+            }
+        }
+
+        $realPath = Security::resolvePath($path, true);
+        if ($realPath === null || !is_dir($realPath)) {
+            return ['success' => false, 'message' => 'Direktori pencarian tidak valid atau akses ditolak.', 'matches' => []];
+        }
+
+        $allowedExtensions = defined('TEXT_PREVIEW_EXTENSIONS') ? TEXT_PREVIEW_EXTENSIONS : [
+            'txt', 'html', 'htm', 'css', 'js', 'json', 'xml', 'md', 'php',
+            'sql', 'env', 'htaccess', 'ini', 'log', 'svg', 'sh', 'bat', 'cmd',
+            'yml', 'yaml', 'conf'
+        ];
+
+        $ignoredDirs = ['.git', 'storage', 'node_modules', 'vendor', '.svn', '.hg'];
+
+        $matches = [];
+        $scannedFiles = 0;
+
+        $flags = FilesystemIterator::SKIP_DOTS | FilesystemIterator::FOLLOW_SYMLINKS;
+
+        if ($includeSubdirs) {
+            $dirIter = new RecursiveDirectoryIterator($realPath, $flags);
+            $filterIter = new RecursiveCallbackFilterIterator($dirIter, function ($current, $key, $iter) use ($ignoredDirs) {
+                if ($current->isDir()) {
+                    return !in_array(strtolower($current->getFilename()), $ignoredDirs, true);
+                }
+                return true;
+            });
+            $iterator = new RecursiveIteratorIterator($filterIter, RecursiveIteratorIterator::LEAVES_ONLY);
+        } else {
+            $iterator = new FilesystemIterator($realPath, $flags);
+        }
+
+        $regexPattern = '';
+        if ($isRegex) {
+            $regexPattern = '/' . str_replace('/', '\/', $query) . '/' . ($caseSensitive ? '' : 'i');
+        }
+
+        foreach ($iterator as $fileInfo) {
+            if ($fileInfo->isDir()) continue;
+
+            $filePath = $fileInfo->getRealPath();
+            if (!$filePath || !is_file($filePath)) continue;
+
+            if ($fileInfo->getSize() > 10 * 1024 * 1024) continue;
+
+            $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+            $filename = strtolower($fileInfo->getFilename());
+            $isTextFile = in_array($ext, $allowedExtensions, true) || 
+                          in_array($filename, ['.env', '.htaccess', '.htpasswd'], true);
+
+            if (!$isTextFile) continue;
+
+            $scannedFiles++;
+
+            $handle = @fopen($filePath, 'r');
+            if (!$handle) continue;
+
+            $lineNumber = 0;
+            $virtualFile = Security::toVirtualPath($filePath);
+
+            while (($line = fgets($handle)) !== false) {
+                $lineNumber++;
+                $found = false;
+
+                if ($isRegex) {
+                    $found = (bool)preg_match($regexPattern, $line);
+                } else {
+                    if ($caseSensitive) {
+                        $found = (strpos($line, $query) !== false);
+                    } else {
+                        $found = (stripos($line, $query) !== false);
+                    }
+                }
+
+                if ($found) {
+                    $cleanSnippet = trim($line);
+                    if (mb_strlen($cleanSnippet) > 200) {
+                        $cleanSnippet = mb_substr($cleanSnippet, 0, 200) . '...';
+                    }
+
+                    $matches[] = [
+                        'virtual_path' => $virtualFile,
+                        'file_name'    => $fileInfo->getFilename(),
+                        'line_number'  => $lineNumber,
+                        'snippet'      => $cleanSnippet,
+                    ];
+
+                    if (count($matches) >= $maxResults) {
+                        break 2;
+                    }
+                }
+            }
+            fclose($handle);
+        }
+
+        return [
+            'success'        => true,
+            'query'          => $query,
+            'matches'        => $matches,
+            'total_matches'  => count($matches),
+            'scanned_files'  => $scannedFiles,
+            'limit_reached'  => (count($matches) >= $maxResults)
+        ];
     }
 }

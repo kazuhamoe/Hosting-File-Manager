@@ -113,7 +113,7 @@ define('SETTINGS_FILE', STORAGE_PATH . DIRECTORY_SEPARATOR . 'settings.json');
 // Batas maksimal upload file (dalam bytes). 0 = mengikuti batasan php.ini
 $maxUploadVal = isset($customSettings['max_upload_size']) ? (int)$customSettings['max_upload_size'] : (200 * 1024 * 1024);
 if (!defined('MAX_UPLOAD_SIZE')) {
-    define('MAX_UPLOAD_SIZE', 209715200); // 200 MB // 350 MB // 200 MB // 350 MB // 200 MB
+    define('MAX_UPLOAD_SIZE', 209715200); // 200 MB
 }
 
 // File preview text extension whitelist

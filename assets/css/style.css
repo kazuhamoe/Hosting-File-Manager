@@ -2316,3 +2316,411 @@ body {
     color: #cbd5e1;
 }
 
+/* ==========================================================================
+   Grid View (Thumbnail Mode) & Interactive SaaS UI
+   ========================================================================== */
+.file-grid-container {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 200px;
+}
+
+.file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 14px;
+}
+
+.grid-card {
+    position: relative;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-light, #e2e8f0);
+    border-radius: 8px;
+    padding: 10px 8px 8px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    user-select: none;
+}
+
+.grid-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    border-color: var(--border-dark, #94a3b8);
+}
+
+.grid-card.selected {
+    background: var(--primary-light, #f0f9ff);
+    border-color: var(--primary, #0284c7);
+    box-shadow: 0 0 0 1px var(--primary, #0284c7);
+}
+
+.grid-card-select {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+}
+
+.grid-card-select input[type="checkbox"] {
+    cursor: pointer;
+    width: 15px;
+    height: 15px;
+}
+
+.grid-card-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 2;
+}
+
+.grid-card-actions .btn-action-trigger {
+    background: transparent;
+    border: none;
+    padding: 3px;
+    border-radius: 4px;
+    color: var(--text-muted, #64748b);
+    opacity: 0.7;
+    cursor: pointer;
+}
+
+.grid-card-actions .btn-action-trigger:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.grid-card-thumb {
+    width: 100%;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+}
+
+.grid-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.grid-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.grid-card-icon svg {
+    width: 46px;
+    height: 46px;
+}
+
+.grid-card-title {
+    width: 100%;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-main, #0f172a);
+    word-break: break-all;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.35;
+    margin-bottom: 4px;
+}
+
+.grid-card-meta {
+    font-size: 11px;
+    color: var(--text-muted, #64748b);
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.grid-badge-protected {
+    font-size: 9px;
+    font-weight: 700;
+    color: #dc2626;
+    background: #fee2e2;
+    padding: 1px 4px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   Interactive Empty State
+   ========================================================================== */
+.empty-state-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 42px 24px;
+    margin: 24px auto;
+    max-width: 460px;
+    background: var(--bg-card, #ffffff);
+    border: 2px dashed var(--border, #cbd5e1);
+    border-radius: 12px;
+    transition: border-color 0.2s ease;
+}
+
+.empty-state-icon-wrap {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: rgba(2, 132, 199, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary, #0284c7);
+    margin-bottom: 14px;
+}
+
+.empty-state-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-main, #0f172a);
+    margin-bottom: 6px;
+}
+
+.empty-state-desc {
+    font-size: 12.5px;
+    color: var(--text-muted, #64748b);
+    line-height: 1.5;
+    max-width: 340px;
+    margin-bottom: 20px;
+}
+
+.empty-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.empty-quick-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+/* ==========================================================================
+   Find in Files (Pencarian Teks di Dalam Berkas)
+   ========================================================================== */
+.find-options-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid var(--border-light, #e2e8f0);
+    border-radius: 6px;
+    padding: 8px 12px;
+}
+
+.find-opt-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-main, #0f172a);
+}
+
+.find-scope-hint {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-muted, #64748b);
+}
+
+.find-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-muted, #64748b);
+    margin-bottom: 8px;
+    padding: 0 2px;
+}
+
+.find-results-list {
+    border: 1px solid var(--border, #cbd5e1);
+    border-radius: 6px;
+    max-height: 340px;
+    overflow-y: auto;
+    background: var(--bg-card, #ffffff);
+}
+
+.find-result-item {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border-light, #e2e8f0);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.find-result-item:last-child {
+    border-bottom: none;
+}
+
+.find-result-item:hover {
+    background-color: var(--bg-hover, #f1f5f9);
+}
+
+.find-result-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 11.5px;
+}
+
+.find-result-file {
+    font-weight: 600;
+    color: var(--primary, #0284c7);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.find-result-line {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted, #64748b);
+    background: rgba(0, 0, 0, 0.04);
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--border-light, #e2e8f0);
+}
+
+.find-result-snippet {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-main, #0f172a);
+    background: rgba(0, 0, 0, 0.02);
+    padding: 6px 10px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.4;
+    border-left: 3px solid var(--primary, #0284c7);
+}
+
+.find-highlight {
+    background: rgba(234, 179, 8, 0.35);
+    color: inherit;
+    font-weight: 700;
+    border-radius: 2px;
+    padding: 0 2px;
+}
+
+/* ==========================================================================
+   Dark Mode Overrides for Grid, Empty State & Find in Files
+   ========================================================================== */
+[data-theme="dark"] .grid-card {
+    background: #0f172a;
+    border-color: #1e293b;
+}
+
+[data-theme="dark"] .grid-card:hover {
+    border-color: #475569;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .grid-card.selected {
+    background: #082f49;
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 1px #38bdf8;
+}
+
+[data-theme="dark"] .grid-card-thumb {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .grid-card-title {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .grid-badge-protected {
+    background: #450a0a;
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .empty-state-card {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .empty-state-icon-wrap {
+    background: rgba(56, 189, 248, 0.1);
+    color: #38bdf8;
+}
+
+[data-theme="dark"] .empty-state-title {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .empty-state-desc {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .find-options-bar {
+    background: #090e1a;
+    border-color: #1e293b;
+}
+
+[data-theme="dark"] .find-opt-label {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .find-results-list {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .find-result-item {
+    border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .find-result-item:hover {
+    background-color: #1e293b;
+}
+
+[data-theme="dark"] .find-result-file {
+    color: #38bdf8;
+}
+
+[data-theme="dark"] .find-result-line {
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.05);
+    border-color: #334155;
+}
+
+[data-theme="dark"] .find-result-snippet {
+    background: #090e1a;
+    color: #e2e8f0;
+    border-left-color: #38bdf8;
+}
+
+[data-theme="dark"] .find-highlight {
+    background: rgba(234, 179, 8, 0.4);
+    color: #fef08a;
+}
+
+
