@@ -24,9 +24,10 @@ $zip->addFile($baseDir . '/index.php', 'index.php');
 $zip->addFile($baseDir . '/config.php', 'config.php');
 $zip->addFile($baseDir . '/updater.php', 'updater.php');
 $zip->addFile($baseDir . '/README.md', 'README.md');
+if (file_exists($baseDir . '/README.id.md')) $zip->addFile($baseDir . '/README.id.md', 'README.id.md');
 if (file_exists($baseDir . '/SECURITY.md')) $zip->addFile($baseDir . '/SECURITY.md', 'SECURITY.md');
 if (file_exists($baseDir . '/favicon.ico')) $zip->addFile($baseDir . '/favicon.ico', 'favicon.ico');
-echo "  + index.php\n  + config.php\n  + updater.php\n  + README.md\n  + SECURITY.md\n  + favicon.ico\n";
+echo "  + index.php\n  + config.php\n  + updater.php\n  + README.md\n  + README.id.md\n  + SECURITY.md\n  + favicon.ico\n";
 
 // 2. Core App Classes & app/index.php
 $zip->addEmptyDir('app');
