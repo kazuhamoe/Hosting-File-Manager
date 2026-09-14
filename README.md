@@ -3,6 +3,8 @@
 [![PHP Version](https://img.shields.io/badge/PHP-7.4%20--%208.3%2B-blue.svg)](https://www.php.net/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero%20(Native%20PHP)-orange.svg)]()
+[![Security: 100% Clean](https://img.shields.io/badge/Security-100%25%20Clean%20%26%20Auditable-brightgreen.svg)](SECURITY.md)
+[![Zero Backdoor](https://img.shields.io/badge/Backdoor-Zero%20(No%20Telemetry)-blue.svg)](SECURITY.md)
 [![Release](https://img.shields.io/badge/Release-v2.0.0-purple.svg)](../../releases/latest)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -13,6 +15,20 @@ Dilengkapi antarmuka modern layaknya cPanel File Manager, kompresi & ekstraksi Z
 <p align="center">
   <img src="screenshots/dashboard-dark.png" alt="Hosting File Manager Dark Mode" width="100%">
 </p>
+
+> [!IMPORTANT]
+> ### 🛡️ Transparansi Keamanan: 100% Bebas Backdoor & Anti-Pencurian Data
+> Mengingat maraknya skrip PHP berbahaya (*web shell / credential stealer*) di internet, kami menjamin secara terbuka dengan transparansi penuh:
+> - ❌ **BUKAN Backdoor / Web Shell:** Tidak ada kode tersembunyi, tidak ada teknik pengaburan (*obfuscation*), dan sama sekali **tidak menggunakan fungsi eksekusi berbahaya** seperti `eval()`, `base64_decode()`, `shell_exec()`, atau `system()`.
+> - ❌ **TIDAK Mencuri Data / Akun cPanel:** Aplikasi ini **tidak memiliki panggilan keluar (*zero outgoing HTTP / cURL callbacks*)** dan tanpa telemetri. Data berkas dan kredensial Anda 100% tetap berada di server hosting Anda sendiri. Aplikasi ini juga tidak meminta maupun menyentuh akun cPanel/WHM server Anda.
+> - ✅ **100% Open Source & Mudah Diaudit:** Seluruh berkas ditulis dalam PHP Native yang bersih, rapi, dan transparan. Siapa pun dapat mengaudit setiap baris kodenya secara mandiri sebelum digunakan di server produksi.
+> 
+> **🔍 Perintah Audit Mandiri (Buktikan Sendiri):**
+> ```bash
+> # Pastikan tidak ada fungsi eksekusi berbahaya di seluruh berkas kode:
+> grep -rnE "eval\(|shell_exec\(|system\(|passthru\(|base64_decode\(" app/ index.php
+> # Hasil: 0 temuan (100% Bersih & Aman)
+> ```
 
 ---
 
