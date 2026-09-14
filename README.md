@@ -32,6 +32,32 @@ Dilengkapi antarmuka modern layaknya cPanel File Manager, kompresi & ekstraksi Z
 
 ---
 
+## 🎯 Untuk Apa Aplikasi Ini? (Fungsi & Skenario Penggunaan)
+
+Banyak yang bertanya: *"Kan di hosting sudah ada cPanel File Manager bawaan, buat apa pakai aplikasi ini lagi?"*
+
+Berikut adalah **kegunaan nyata dan masalah yang diselesaikan** oleh Hosting File Manager:
+
+1. 👥 **Akses File Aman untuk Klien / Tim (Tanpa Kasih Akun cPanel Utama)**  
+   Jika Anda seorang *freelancer* atau agensi web, sering kali klien atau anggota tim butuh mengunggah atau mengedit berkas website. Memberikan akun cPanel utama sangat berisiko karena mereka bisa tidak sengaja mengutak-atik database MySQL, setting DNS, atau akun email. Dengan aplikasi ini, Anda cukup memasangnya di subdomain (contoh: `files.domainklien.com`) dengan akses terisolasi hanya pada folder website tersebut.
+
+2. ⚡ **Alternatif Ringan & Cepat Saat cPanel Lemot**  
+   cPanel File Manager sering kali terasa berat, waktu muat (*loading*) lambat, atau sesinya cepat kedaluwarsa sendiri saat Anda sedang asyik bekerja. Hosting File Manager berbasis **100% PHP Native murni tanpa database**, sehingga sangat ringan, instan dibuka, dan memiliki masa aktif sesi login hingga 30 hari.
+
+3. 🖥️ **Web File Manager untuk VPS / Server Tanpa Control Panel**  
+   Jika Anda mengelola VPS (Ubuntu, Debian, AlmaLinux) yang hanya terpasang web server polos (Nginx/Apache) tanpa panel berbayar seperti cPanel/Plesk, mengelola berkas lewat terminal SSH sering kali memakan waktu. Aplikasi ini memberi Anda antarmuka web GUI explorer yang lengkap dan modern secara cuma-cuma.
+
+4. 🔍 **Fitur Produktivitas yang Tidak Ada di cPanel Bawaan**  
+   - **Cari Teks di Seluruh Berkas (*Find in Files*):** Cari potongan kode/string di puluhan berkas PHP/HTML/JS sekaligus dengan dukungan *Regex*, dan langsung lompat ke baris kodenya di editor dalam 1-klik.
+   - **Tempat Sampah (*Recycle Bin*):** Berkas yang terhapus tidak langsung musnah permanen, melainkan masuk ke Trash dan bisa dikembalikan (*restore*) ke lokasi asalnya.
+   - **Log Riwayat Aktivitas (*Activity Log*):** Catatan transparan mengenai kapan dan berkas apa saja yang diunggah, diedit, diekstrak, atau dihapus.
+   - **Editor Kode Nyaman di HP:** Dukungan tampilan layar sentuh adaptif dan menu klik-kanan tahan (*long-press*).
+
+5. 🆘 **Akses Darurat Saat cPanel Down / Terblokir**  
+   Ketika dashboard cPanel sedang *error*, lisensinya kedaluwarsa, atau port 2083/2082 diblokir oleh firewall jaringan kantor/kampus Anda, Anda tetap dapat mengelola berkas website melalui port standar HTTP/HTTPS (port 80/443).
+
+---
+
 ## ✨ Fitur Utama (Key Features)
 
 - **🖥️ Tampilan cPanel-like Modern** — Responsif, dark/light theme, ikon SVG bersih.
