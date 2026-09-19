@@ -12,6 +12,7 @@ storage/temp/*
 
 # Session & temporary test artifacts
 cookies.txt
+.user.ini
 sandbox/
 test_*/
 

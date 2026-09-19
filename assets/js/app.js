@@ -1840,6 +1840,34 @@
             if (infoUp) infoUp.textContent = data.server_limits?.upload_max_filesize || 'N/A';
             if (infoPost) infoPost.textContent = data.server_limits?.post_max_size || 'N/A';
             if (infoMem) infoMem.textContent = data.server_limits?.memory_limit || 'N/A';
+
+            // Prefill PHP override fields dengan nilai server aktif (angka MB saja)
+            const toMb = (v) => {
+                if (!v) return '';
+                const n = parseInt(v, 10);
+                if (isNaN(n)) return '';
+                const unit = String(v).trim().slice(-1).toLowerCase();
+                if (unit === 'g') return n * 1024;
+                if (unit === 'k') return Math.round(n / 1024);
+                return n; // diasumsikan sudah MB
+            };
+            const phpUp = document.getElementById('settingsPhpUploadMax');
+            const phpPost = document.getElementById('settingsPhpPostMax');
+            const phpMem = document.getElementById('settingsPhpMemoryLimit');
+            if (phpUp && !phpUp.value) phpUp.value = toMb(data.server_limits?.upload_max_filesize);
+            if (phpPost && !phpPost.value) phpPost.value = toMb(data.server_limits?.post_max_size);
+            if (phpMem && !phpMem.value) phpMem.value = toMb(data.server_limits?.memory_limit);
+        }
+
+        // Toggle tampilan input override PHP
+        const checkPhpOverride = document.getElementById('settingsEnablePhpOverride');
+        const wrapPhpOverride = document.getElementById('wrapperPhpOverride');
+        if (checkPhpOverride && wrapPhpOverride) {
+            checkPhpOverride.checked = false;
+            wrapPhpOverride.style.display = 'none';
+            checkPhpOverride.onchange = () => {
+                wrapPhpOverride.style.display = checkPhpOverride.checked ? 'grid' : 'none';
+            };
         }
 
         // Reset Root handler
@@ -1881,6 +1909,13 @@
         const sessionTimeout = parseInt(selectTimeout?.value, 10) || 2592000;
         const showDiskUsage = checkDisk?.checked ? '1' : '0';
         const diskQuotaMb = parseInt(inputQuota?.value, 10) || 0;
+
+        // PHP Server Limit Override
+        const checkPhpOverride = document.getElementById('settingsEnablePhpOverride');
+        const phpUploadMax = parseInt(document.getElementById('settingsPhpUploadMax')?.value, 10) || 0;
+        const phpPostMax = parseInt(document.getElementById('settingsPhpPostMax')?.value, 10) || 0;
+        const phpMemoryLimit = parseInt(document.getElementById('settingsPhpMemoryLimit')?.value, 10) || 0;
+        const enablePhpOverride = checkPhpOverride?.checked || false;
 
         const showAlert = (msg, isSuccess = false) => {
             if (!alertEl) return;
@@ -1926,6 +1961,12 @@
         formData.append('session_timeout', sessionTimeout);
         formData.append('show_disk_usage', showDiskUsage);
         formData.append('disk_quota_mb', diskQuotaMb);
+        if (enablePhpOverride) {
+            formData.append('enable_php_override', '1');
+            formData.append('php_upload_max', phpUploadMax);
+            formData.append('php_post_max', phpPostMax);
+            formData.append('php_memory_limit', phpMemoryLimit);
+        }
 
         const data = await requestApi('?action=update_settings', {
             method: 'POST',

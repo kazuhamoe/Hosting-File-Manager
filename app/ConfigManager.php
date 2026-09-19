@@ -164,6 +164,107 @@ class ConfigManager
     }
 
     /**
+     * Menulis override batas konfigurasi PHP (upload_max_filesize, post_max_size, memory_limit)
+     * ke berkas .user.ini (PHP FastCGI/CGI/LiteSpeed) dan .htaccess (Apache mod_php).
+     *
+     * Catatan: upload_max_filesize & post_max_size adalah direktif PHP_INI_PERDIR yang tidak
+     * dapat diubah via ini_set() saat runtime, sehingga harus ditulis ke berkas .ini/.htaccess.
+     *
+     * @param int $uploadMb upload_max_filesize dalam MB
+     * @param int $postMb   post_max_size dalam MB
+     * @param int $memMb    memory_limit dalam MB
+     * @return array Status penulisan tiap berkas
+     */
+    public static function applyPhpIniOverride(int $uploadMb, int $postMb, int $memMb): array
+    {
+        // Batasi rentang nilai yang wajar untuk mencegah kesalahan input
+        $uploadMb = max(1, min(10240, $uploadMb));
+        $postMb   = max(1, min(10240, $postMb));
+        $memMb    = max(16, min(20480, $memMb));
+
+        // post_max_size disarankan >= upload_max_filesize agar upload tidak terpotong
+        if ($postMb < $uploadMb) {
+            $postMb = $uploadMb;
+        }
+        // memory_limit sebaiknya >= post_max_size
+        if ($memMb < $postMb) {
+            $memMb = $postMb;
+        }
+
+        $baseDir = dirname(__DIR__);
+        $results = [];
+        $marker  = 'Hosting File Manager - PHP Limit Override';
+
+        // 1. Tulis / perbarui .user.ini
+        $userIniFile = $baseDir . DIRECTORY_SEPARATOR . '.user.ini';
+        $userIniBlock = "; BEGIN {$marker}\n"
+            . "upload_max_filesize = {$uploadMb}M\n"
+            . "post_max_size = {$postMb}M\n"
+            . "memory_limit = {$memMb}M\n"
+            . "; END {$marker}\n";
+
+        $existingUserIni = file_exists($userIniFile) ? (string)@file_get_contents($userIniFile) : '';
+        $cleanUserIni = preg_replace(
+            '/; BEGIN ' . preg_quote($marker, '/') . '.*?; END ' . preg_quote($marker, '/') . '\s*/s',
+            '',
+            $existingUserIni
+        );
+        $newUserIni = rtrim((string)$cleanUserIni) === '' ? $userIniBlock : rtrim((string)$cleanUserIni) . "\n\n" . $userIniBlock;
+        $results['user_ini'] = @file_put_contents($userIniFile, $newUserIni, LOCK_EX) !== false;
+
+        // 2. Tulis / perbarui .htaccess (blok php_value untuk Apache mod_php)
+        $htaccessFile = $baseDir . DIRECTORY_SEPARATOR . '.htaccess';
+        $htBlock = "# BEGIN {$marker}\n"
+            . "<IfModule mod_php.c>\n"
+            . "    php_value upload_max_filesize {$uploadMb}M\n"
+            . "    php_value post_max_size {$postMb}M\n"
+            . "    php_value memory_limit {$memMb}M\n"
+            . "</IfModule>\n"
+            . "<IfModule mod_php7.c>\n"
+            . "    php_value upload_max_filesize {$uploadMb}M\n"
+            . "    php_value post_max_size {$postMb}M\n"
+            . "    php_value memory_limit {$memMb}M\n"
+            . "</IfModule>\n"
+            . "<IfModule mod_php8.c>\n"
+            . "    php_value upload_max_filesize {$uploadMb}M\n"
+            . "    php_value post_max_size {$postMb}M\n"
+            . "    php_value memory_limit {$memMb}M\n"
+            . "</IfModule>\n"
+            . "<IfModule php_module>\n"
+            . "    php_value upload_max_filesize {$uploadMb}M\n"
+            . "    php_value post_max_size {$postMb}M\n"
+            . "    php_value memory_limit {$memMb}M\n"
+            . "</IfModule>\n"
+            . "<IfModule php8_module>\n"
+            . "    php_value upload_max_filesize {$uploadMb}M\n"
+            . "    php_value post_max_size {$postMb}M\n"
+            . "    php_value memory_limit {$memMb}M\n"
+            . "</IfModule>\n"
+            . "# END {$marker}\n";
+
+        $existingHt = file_exists($htaccessFile) ? (string)@file_get_contents($htaccessFile) : '';
+        $cleanHt = preg_replace(
+            '/# BEGIN ' . preg_quote($marker, '/') . '.*?# END ' . preg_quote($marker, '/') . '\s*/s',
+            '',
+            $existingHt
+        );
+        $newHt = rtrim((string)$cleanHt) === '' ? $htBlock : rtrim((string)$cleanHt) . "\n\n" . $htBlock;
+        $results['htaccess'] = @file_put_contents($htaccessFile, $newHt, LOCK_EX) !== false;
+
+        // 3. Coba terapkan memory_limit secara runtime (satu-satunya yang bisa via ini_set)
+        @ini_set('memory_limit', $memMb . 'M');
+
+        return [
+            'upload_max_filesize' => $uploadMb . 'M',
+            'post_max_size'       => $postMb . 'M',
+            'memory_limit'        => $memMb . 'M',
+            'user_ini_written'    => $results['user_ini'],
+            'htaccess_written'    => $results['htaccess'],
+            'any_written'         => ($results['user_ini'] || $results['htaccess'])
+        ];
+    }
+
+    /**
      * Sinkronisasi nilai konfigurasi ke berkas config.php agar file kode tetap up-to-date
      */
     private static function syncToConfigFile(array $settings): void

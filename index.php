@@ -952,8 +952,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $systemUpdated = true;
             }
 
+            // 3. Override Batas Konfigurasi PHP Server (.user.ini & .htaccess)
+            $phpOverrideApplied = false;
+            $phpOverrideResult = null;
+            $enablePhpOverride = !empty($_POST['enable_php_override']) && ($_POST['enable_php_override'] === '1' || $_POST['enable_php_override'] === 'true' || $_POST['enable_php_override'] === true);
+
+            if ($enablePhpOverride) {
+                // Verifikasi password terlebih dahulu jika belum diverifikasi via saveSettings
+                if (!$systemUpdated && !$accountUpdated && !Auth::verifyPassword($currentPassword)) {
+                    jsonResponse(['success' => false, 'message' => 'Password saat ini salah. Perubahan batas PHP dibatalkan.'], 400);
+                }
+
+                $phpUploadMb = isset($_POST['php_upload_max']) ? (int)$_POST['php_upload_max'] : 0;
+                $phpPostMb   = isset($_POST['php_post_max']) ? (int)$_POST['php_post_max'] : 0;
+                $phpMemMb    = isset($_POST['php_memory_limit']) ? (int)$_POST['php_memory_limit'] : 0;
+
+                if ($phpUploadMb < 1 || $phpPostMb < 1 || $phpMemMb < 16) {
+                    jsonResponse(['success' => false, 'message' => 'Nilai batas PHP tidak valid. upload/post minimal 1 MB, memory_limit minimal 16 MB.'], 400);
+                }
+
+                $phpOverrideResult = ConfigManager::applyPhpIniOverride($phpUploadMb, $phpPostMb, $phpMemMb);
+                $phpOverrideApplied = !empty($phpOverrideResult['any_written']);
+
+                if (!$phpOverrideApplied) {
+                    jsonResponse(['success' => false, 'message' => 'Gagal menulis .user.ini / .htaccess. Periksa izin tulis (writable) folder aplikasi di hosting Anda.'], 500);
+                }
+
+                Logger::log('CONFIG', 'PHP Server Limits', 'SUCCESS', "Batas PHP diubah: upload_max_filesize={$phpOverrideResult['upload_max_filesize']}, post_max_size={$phpOverrideResult['post_max_size']}, memory_limit={$phpOverrideResult['memory_limit']}");
+            }
+
             $messages = [];
             if ($systemUpdated) $messages[] = 'Konfigurasi sistem berhasil diperbarui.';
+            if ($phpOverrideApplied) {
+                $msgPhp = "Batas PHP server diterapkan (upload: {$phpOverrideResult['upload_max_filesize']}, post: {$phpOverrideResult['post_max_size']}, memory: {$phpOverrideResult['memory_limit']}).";
+                if (empty($phpOverrideResult['user_ini_written'])) {
+                    $msgPhp .= ' Catatan: .user.ini gagal ditulis, hanya .htaccess yang diperbarui.';
+                }
+                $msgPhp .= ' Perubahan .user.ini bisa perlu hingga ~5 menit untuk aktif penuh.';
+                $messages[] = $msgPhp;
+            }
             if ($accountUpdated) $messages[] = 'Akun administrator berhasil diperbarui.';
             if (empty($messages)) $messages[] = 'Pengaturan berhasil disimpan.';
 
@@ -1908,9 +1945,34 @@ if (!empty($action)) {
                             </div>
                         </div>
 
+                        <!-- OVERRIDE BATAS KONFIGURASI PHP SERVER (php.ini via .user.ini & .htaccess) -->
+                        <div style="background: rgba(234, 88, 12, 0.05); border: 1px solid rgba(234, 88, 12, 0.18); border-radius: 6px; padding: 12px; margin-bottom: 14px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; margin-bottom: 6px;">
+                                <input type="checkbox" id="settingsEnablePhpOverride" value="1" style="width: 16px; height: 16px; cursor: pointer;">
+                                <span>Ubah Batas Konfigurasi PHP Server (php.ini)</span>
+                            </label>
+                            <small style="color: #64748b; font-size: 11px; display: block; margin-bottom: 8px;">
+                                Menulis <code>.user.ini</code> &amp; <code>.htaccess</code> untuk menaikkan batas <code>upload_max_filesize</code>, <code>post_max_size</code>, dan <code>memory_limit</code>. Berfungsi pada mayoritas hosting cPanel/LiteSpeed. Perubahan <code>.user.ini</code> bisa perlu ~5 menit (cache) atau restart PHP untuk aktif penuh.
+                            </small>
+                            <div id="wrapperPhpOverride" style="display: none; margin-top: 8px; padding-top: 10px; border-top: 1px solid rgba(234, 88, 12, 0.15); grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="settingsPhpUploadMax" style="font-size: 12px; font-weight: 500;">upload_max_filesize (MB):</label>
+                                    <input type="number" id="settingsPhpUploadMax" class="form-control" min="1" max="10240" step="1" placeholder="10">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="settingsPhpPostMax" style="font-size: 12px; font-weight: 500;">post_max_size (MB):</label>
+                                    <input type="number" id="settingsPhpPostMax" class="form-control" min="1" max="10240" step="1" placeholder="10">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="settingsPhpMemoryLimit" style="font-size: 12px; font-weight: 500;">memory_limit (MB):</label>
+                                    <input type="number" id="settingsPhpMemoryLimit" class="form-control" min="16" max="20480" step="1" placeholder="256">
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Info Batasan PHP Server -->
                         <div id="settingsPhpServerInfo" style="font-size: 11.5px; color: #64748b; line-height: 1.5; padding: 8px 12px; background: rgba(0,0,0,0.03); border-radius: 6px; border: 1px solid rgba(0,0,0,0.06);">
-                            <strong>Info PHP Server:</strong> upload_max: <span id="infoUploadMax">-</span> &bull; post_max: <span id="infoPostMax">-</span> &bull; mem_limit: <span id="infoMemLimit">-</span>
+                            <strong>Info PHP Server (Aktif):</strong> upload_max: <span id="infoUploadMax">-</span> &bull; post_max: <span id="infoPostMax">-</span> &bull; mem_limit: <span id="infoMemLimit">-</span>
                         </div>
                     </div>
 
