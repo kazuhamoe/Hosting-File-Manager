@@ -39,5 +39,18 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
         with:
           files: hosting-file-manager.zip
+          name: Release ${{ github.ref_name }} — PHP Server Limits Override
+          body: |
+            ## 📦 Hosting File Manager v2.1.0
+
+            ### 🚀 Fitur Baru & Peningkatan:
+            - ⚙️ **PHP Server Limits Override:** Mengubah batas upload PHP (`upload_max_filesize`, `post_max_size`, `memory_limit`) langsung lewat modal UI web.
+            - 🛡️ **Dual Config Generator:** Otomatis menghasilkan dan memperbarui konfigurasi pada file `.user.ini` (FastCGI / PHP-FPM / cPanel) dan `.htaccess` (Apache `php_value`).
+            - 📈 **Bypass Batas Bawaan Hosting:** Memungkinkan unggah berkas ukuran besar (misal 100M, 500M, 1G+) tanpa perlu akses SSH atau konfigurasi manual server.
+            - 🔍 **Deteksi Otomatis:** Nilai runtime PHP aktif saat ini langsung terisi otomatis pada form input untuk memudahkan penyesuaian.
+            - 🧪 **Perbaikan Kompatibilitas CI/CD:** Fallback path root dinamis pada test suite Linux & Windows (100% pass 75 assertions).
+
+            ---
+            **Paket Produksi:** Unduh berkas `hosting-file-manager.zip` di bawah ini dan ekstrak ke direktori hosting Anda.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
