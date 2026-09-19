@@ -7,8 +7,9 @@ $_SERVER['REQUEST_METHOD'] = 'GET';
 require_once __DIR__ . '/../app/Security.php';
 require_once __DIR__ . '/../app/Logger.php';
 require_once __DIR__ . '/../app/FileManager.php';
-$config = json_decode(file_get_contents(__DIR__ . '/../storage/credentials.json'), true);
-$root = $config['allowed_root'] ?? 'C:\\xampp\\htdocs';
+$credFile = __DIR__ . '/../storage/credentials.json';
+$config = file_exists($credFile) ? @json_decode(file_get_contents($credFile), true) : [];
+$root = (!empty($config['allowed_root']) && is_dir($config['allowed_root'])) ? $config['allowed_root'] : dirname(__DIR__);
 define('ALLOWED_ROOT', $root);
 $passed = 0; $failed = 0; $errors = [];
 function assert_ok(bool $cond, string $msg): void { global $passed,$failed,$errors; if($cond){echo "  PASS: $msg\n";$passed++;}else{echo "  FAIL: $msg\n";$failed++;$errors[]=$msg;} }
