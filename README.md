@@ -9,7 +9,7 @@
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero%20(Native%20PHP)-orange.svg)]()
 [![Security: 100% Clean](https://img.shields.io/badge/Security-100%25%20Clean%20%26%20Auditable-brightgreen.svg)](SECURITY.md)
 [![Zero Backdoor](https://img.shields.io/badge/Backdoor-Zero%20(No%20Telemetry)-blue.svg)](SECURITY.md)
-[![Release](https://img.shields.io/badge/Release-v2.0.0-purple.svg)](../../releases/latest)
+[![Release](https://img.shields.io/badge/Release-v2.1.0-purple.svg)](../../releases/latest)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 **Hosting File Manager** is a modern, lightweight, standalone web file manager built with **pure Native PHP**. It is specifically designed to manage web hosting files and directories (`public_html`, subdomains, VPS directories, etc.) directly from your browser without any dependency on cPanel API, MySQL database, Composer, or external frameworks.
@@ -218,6 +218,11 @@ define('AUTH_PASS_HASH', '');                // Empty = enable Setup Wizard
 ---
 
 ## 📦 Release History (Changelog)
+
+### 🎉 v2.1.0 — September 19, 2026
+- ✅ **PHP Server Limits Override:** Configure `upload_max_filesize`, `post_max_size`, and `memory_limit` directly from the UI via `.user.ini` and `.htaccess`.
+- ✅ **Bypass Default Upload Caps:** Allows uploading files larger than default shared hosting limits (e.g. 10MB/2M up to 500MB, 1GB+, etc.).
+- ✅ **Pre-populated Values:** Automatically reads and displays active PHP runtime values for seamless tuning.
 
 ### 🎉 v2.0.0 — September 12, 2026
 - ✅ **Recycle Bin / Trash:** Soft delete, 1-click restore, badge counter, empty trash.

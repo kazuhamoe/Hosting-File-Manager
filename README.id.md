@@ -9,7 +9,7 @@
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero%20(Native%20PHP)-orange.svg)]()
 [![Security: 100% Clean](https://img.shields.io/badge/Security-100%25%20Clean%20%26%20Auditable-brightgreen.svg)](SECURITY.md)
 [![Zero Backdoor](https://img.shields.io/badge/Backdoor-Zero%20(No%20Telemetry)-blue.svg)](SECURITY.md)
-[![Release](https://img.shields.io/badge/Release-v2.0.0-purple.svg)](../../releases/latest)
+[![Release](https://img.shields.io/badge/Release-v2.1.0-purple.svg)](../../releases/latest)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 **Hosting File Manager** adalah web-based file manager standalone berbasis **PHP Native** yang dirancang khusus untuk mengelola file dan direktori hosting (`public_html`, subdomain, dsb.) langsung dari peramban (browser) tanpa ketergantungan pada cPanel API, database MySQL, ataupun framework eksternal.
@@ -218,6 +218,11 @@ define('AUTH_PASS_HASH', '');                // Kosong = aktifkan Setup Wizard
 ---
 
 ## 📦 Riwayat Rilis (Changelog)
+
+### 🎉 v2.1.0 — 19 September 2026
+- ✅ **PHP Server Limits Override:** Atur batas `upload_max_filesize`, `post_max_size`, dan `memory_limit` langsung dari antarmuka web melalui `.user.ini` dan `.htaccess`.
+- ✅ **Bypass Limit Bawaan Hosting:** Memungkinkan upload berkas di atas batas default shared hosting (misal dari 10MB/2MB dinaikkan ke 100MB, 500MB, 1GB+, dsb.).
+- ✅ **Deteksi & Nilai Otomatis:** Nilai batas runtime PHP saat ini ditampilkan otomatis untuk mempermudah konfigurasi.
 
 ### 🎉 v2.0.0 — 12 September 2026
 - ✅ **Recycle Bin / Trash** — soft delete, restore 1-klik, badge counter, kosongkan semua
